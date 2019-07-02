@@ -27,11 +27,21 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0,
       allowNull: false,
     },
+    postedBy: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    published: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   });
 
   Task.associate = models => {
     Task.belongsTo(models.User, {
-      foreignKey: 'postedBy'
+      foreignKey: 'postedBy',
+      as: 'Owner',
     });
 
     Task.hasMany(models.Application, {

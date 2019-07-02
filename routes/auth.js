@@ -140,7 +140,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(400).json({
+    return res.status(500).json({
       success: false,
       message: 'Something went wrong',
       data: err

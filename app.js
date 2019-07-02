@@ -4,14 +4,20 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const cors = require('cors');
 const jwt = require('./middleware/jwt');
+const socket_io = require('socket.io');
 
+const app = express();
+
+// Socket.io
+const io = socket_io();
+app.io = io;
+
+const index = require('./routes/index')(io);
 const authRouter = require('./routes/auth');
 const tasksRouter = require('./routes/tasks');
 const usersRouter = require('./routes/users');
 const applicationsRouter = require('./routes/applications');
 const messagesRouter = require('./routes/messages');
-
-const app = express();
 
 app.use(cors());
 app.use(logger('dev'));

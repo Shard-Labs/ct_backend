@@ -20,5 +20,8 @@
   },
   "stage": {
     "type": "integer"
+  },
+  "postedBy": {
+    "type": "text"
   }
 }

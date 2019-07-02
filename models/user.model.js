@@ -26,6 +26,15 @@ module.exports = (sequelize, DataTypes) => {
     confirmationHash: {
       type: DataTypes.STRING,
     },
+    online: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    socketId: {
+      type: DataTypes.STRING,
+      defaultValue: null,
+    },
   }, {
     defaultScope: {
       attributes: { exclude: ['password', 'confirmationHash'] },

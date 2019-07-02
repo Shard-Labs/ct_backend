@@ -31,7 +31,7 @@ module.exports = {
       },
       text: {
         type: Sequelize.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       read: {
         type: Sequelize.BOOLEAN,

@@ -28,6 +28,15 @@ module.exports = {
       confirmationHash: {
         type: Sequelize.STRING
       },
+      online: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
+      socketId: {
+        type: Sequelize.STRING,
+        defaultValue: null,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

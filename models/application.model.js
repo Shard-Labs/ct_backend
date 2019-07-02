@@ -11,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    clientId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     freelancerId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -25,6 +29,11 @@ module.exports = (sequelize, DataTypes) => {
   Application.associate = models => {
     Application.belongsTo(models.Task, {
       foreignKey: 'taskId'
+    });
+
+    Application.belongsTo(models.User, {
+      foreignKey: 'clientId',
+      as: 'Client'
     });
 
     Application.belongsTo(models.User, {

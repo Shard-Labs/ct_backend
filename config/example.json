@@ -1,0 +1,33 @@
+{
+  "frontendUrl": "http://localhost:8080",
+  "aws": {
+    "clientKey": "XXX",
+    "secretKey": "XXX",
+    "region": "eu-central-1",
+    "esHost": "https://xxx"
+  },
+  "jwt": {
+    "secret": "xxx"
+  },
+  "es": {
+    "indexName": "cryptotask",
+    "tasksTypeName": "tasks"
+  },
+  "email": {
+    "host": "url",
+    "port": 465,
+    "username": "XXX",
+    "password": "XXX",
+    "defaultFrom": "test@test.com"
+  },
+  "db": {
+    "host": "xxx",
+    "database": "xxx",
+    "username": "xxx",
+    "password": "xxx"
+  },
+  "storage": {
+    "region": "eu-central-1",
+    "chatBucket": "xxx"
+  }
+}

@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     text: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     read: {
       type: DataTypes.BOOLEAN,
@@ -33,6 +33,10 @@ module.exports = (sequelize, DataTypes) => {
     Message.belongsTo(models.User, {
       foreignKey: 'senderId',
       as: 'Sender'
+    });
+
+    Message.hasMany(models.Attachment, {
+      foreignKey: 'messageId'
     });
   };
 

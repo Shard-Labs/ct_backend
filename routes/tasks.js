@@ -4,7 +4,8 @@ const Joi = require('@hapi/joi');
 const config = require('config');
 const es = require('../lib/es');
 const models = require('../models');
-const taskStatuses = require('../lib/taskStatuses.js');
+const _ = require('lodash');
+const mailer = require('../lib/mailer.js');
 
 /**
  * Create new task
@@ -16,6 +17,7 @@ router.post('/', async (req, res) => {
     description: Joi.string().required(),
     price: Joi.number().min(1).integer().required(),
     worktime: Joi.number().min(1).integer().required(),
+    published: Joi.boolean().optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -45,25 +47,96 @@ router.post('/', async (req, res) => {
     });
   }
 
-  // index to elasticsearch
-  const esData = {
-    index: config.get('es.indexName'),
-    id: taskData.id,
-    type: config.get('es.tasksTypeName'),
-    body: {
-      ...req.body,
-      timePosted: taskData.createdAt,
-      stage: 0,
+  // only if task is published add it to elastic search
+  if (req.body.published) {
+    const user = await models.User.findByPk(req.decoded.id);
+
+    // index to elasticsearch
+    const esData = {
+      index: config.get('es.indexName'),
+      id: taskData.id,
+      type: config.get('es.tasksTypeName'),
+      body: {
+        ...req.body,
+        timePosted: taskData.createdAt,
+        stage: 0,
+        postedBy: user.name,
+      }
+    };
+
+    try {
+      await es.index(esData);
+    } catch (err) {
+      res.status(400).json({
+        success: false,
+        message: 'Something went wrong',
+        data: err
+      });
     }
-  };
+  }
 
+  return res.json({
+    success: true,
+    message: 'Task successfully saved',
+    data: taskData,
+  });
+});
+
+router.put('/:taskId', async (req, res) => {
+  const taskData = await models.Task.findByPk(req.params.taskId);
+
+  // task does not exist
+  if (!taskData) {
+    return res.status(404).json({
+      success: false,
+      message: 'Task not found!',
+    });
+  }
+
+  // user can only edit his own tasks
+  if (taskData.postedBy !== req.decoded.id) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized!',
+    });
+  }
+
+  // don't allow editing published tasks
+  if (taskData.published) {
+    return res.status(400).json({
+      success: false,
+      message: 'You can not edit published tasks',
+    });
+  }
+
+  // validation
+  const schema = Joi.object().keys({
+    title: Joi.string().required(),
+    description: Joi.string().required(),
+    price: Joi.number().min(1).integer().required(),
+    worktime: Joi.number().min(1).integer().required(),
+    published: Joi.boolean().optional(),
+  });
+
+  const validation = Joi.validate(req.body, schema, {
+    abortEarly: false,
+    allowUnknown: true,
+  });
+
+  if (validation.error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      data: validation.error
+    });
+  }
+
+  const updatableFields = ['title', 'description', 'price', 'worktime', 'published'];
+
+  // save do database
   try {
-    await es.index(esData);
-
-    return res.json({
-      success: true,
-      message: 'Task successfully saved',
-      data: taskData,
+    await taskData.update(req.body, {
+      fields: updatableFields
     });
   } catch (err) {
     res.status(400).json({
@@ -72,6 +145,37 @@ router.post('/', async (req, res) => {
       data: err
     });
   }
+
+  // index to elasticsearch if published
+  if (req.body.published) {
+    const esData = {
+      index: config.get('es.indexName'),
+      id: taskData.id,
+      type: config.get('es.tasksTypeName'),
+      body: {
+        doc: {
+          ..._.pick(req.body, updatableFields),
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+
+    try {
+      await es.update(esData);
+    } catch (err) {
+      res.status(400).json({
+        success: false,
+        message: 'Something went wrong',
+        data: err
+      });
+    }
+  }
+
+  return res.json({
+    success: true,
+    message: 'Task successfully saved',
+    data: taskData,
+  });
 });
 
 /**
@@ -133,7 +237,14 @@ router.post('/apply/:taskId', async (req, res) => {
   const taskId = req.params.taskId;
 
   try {
-    const task = await models.Task.findByPk(taskId);
+    const task = await models.Task.findByPk(taskId, {
+      include: [{
+        model: models.User,
+        as: 'Owner',
+        attributes: ['id', 'email', 'name']
+      }]
+    });
+
     const application = await models.Application.findOne({
       where: {
         taskId: taskId,
@@ -158,7 +269,16 @@ router.post('/apply/:taskId', async (req, res) => {
     // make new application
     const newApp = await models.Application.create({
       taskId: taskId,
+      clientId: task.postedBy,
       freelancerId: req.decoded.id,
+    });
+
+    // send notification to task owner
+    await mailer.sendMail({
+      from: config.get('email.defaultFrom'), // sender address
+      to: task.Owner.email, // list of receivers
+      subject: 'New task application - Cryptotask', // Subject line
+      text: `Hi, you have new application for task ${task.title} from ${task.Owner.name}`, // plain text body
     });
 
     return res.json({
@@ -249,11 +369,19 @@ router.get('/:taskId', async (req, res) => {
       applications = await models.Application.findAll({
         where: {
           taskId: taskId,
-        }
+        },
+        include: [
+          {
+            model: models.User,
+            as: 'Freelancer',
+            attributes: ['id', 'name'],
+          }
+        ]
       });
     } else { // freelancer or other users (get only applications created by them)
       applications = await models.Application.findAll({
         where:{
+          taskId: taskId,
           freelancerId: req.decoded.id,
         },
       });
