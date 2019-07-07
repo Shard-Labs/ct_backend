@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
 
     // index to elasticsearch
     const esData = {
-      index: config.get('es.indexName'),
+      index: config.get('es.tasksIndexName'),
       id: taskData.id,
       type: config.get('es.tasksTypeName'),
       body: {
@@ -80,6 +80,48 @@ router.post('/', async (req, res) => {
     message: 'Task successfully saved',
     data: taskData,
   });
+});
+
+router.delete('/:taskId', async (req, res) => {
+  const taskData = await models.Task.findByPk(req.params.taskId);
+
+  // task does not exist
+  if (!taskData) {
+    return res.status(404).json({
+      success: false,
+      message: 'Task not found!',
+    });
+  }
+
+  // user can only delete his own tasks
+  if (taskData.postedBy !== req.decoded.id) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized!',
+    });
+  }
+
+  try {
+    await taskData.destroy();
+
+    // delete from elastic
+    await es.delete({
+      index: config.get('es.tasksIndexName'),
+      id: req.params.taskId,
+      type: config.get('es.tasksTypeName'),
+    });
+
+    return res.json({
+      success: true,
+      message: 'Task successfully deleted',
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+      data: err
+    });
+  }
 });
 
 router.put('/:taskId', async (req, res) => {
@@ -139,7 +181,7 @@ router.put('/:taskId', async (req, res) => {
       fields: updatableFields
     });
   } catch (err) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: 'Something went wrong',
       data: err
@@ -149,7 +191,7 @@ router.put('/:taskId', async (req, res) => {
   // index to elasticsearch if published
   if (req.body.published) {
     const esData = {
-      index: config.get('es.indexName'),
+      index: config.get('es.tasksIndexName'),
       id: taskData.id,
       type: config.get('es.tasksTypeName'),
       body: {
@@ -163,7 +205,7 @@ router.put('/:taskId', async (req, res) => {
     try {
       await es.update(esData);
     } catch (err) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: 'Something went wrong',
         data: err
@@ -213,7 +255,7 @@ router.get('/search', async (req, res) => {
 
   try {
     const result = await es.search({
-      index: config.get('es.indexName'),
+      index: config.get('es.tasksIndexName'),
       body: searchBody,
     });
 

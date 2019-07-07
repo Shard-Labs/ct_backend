@@ -18,6 +18,14 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING,
     },
+    bio: {
+      type: DataTypes.TEXT,
+      defaultValue: null,
+    },
+    picture: {
+      type: DataTypes.TEXT('long'),
+      defaultValue: null,
+    },
     emailConfirmed: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -53,6 +61,16 @@ module.exports = (sequelize, DataTypes) => {
 
     User.hasMany(models.Application, {
       foreignKey: 'freelancerId'
+    });
+
+    User.belongsToMany(models.Skill, {
+      as: 'Skills',
+      through: 'SkillUser'
+    });
+
+    User.belongsToMany(models.Language, {
+      as: 'Languages',
+      through: 'LanguageUser'
     });
   };
 

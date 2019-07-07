@@ -1,0 +1,43 @@
+{
+  "tasks": {
+    "bcId": {
+      "type": "integer",
+      "index": false
+    },
+    "title": {
+      "type": "text"
+    },
+    "description": {
+      "type": "text"
+    },
+    "price": {
+      "type": "integer"
+    },
+    "worktime": {
+      "type": "integer"
+    },
+    "timePosted": {
+      "type": "date"
+    },
+    "stage": {
+      "type": "integer"
+    },
+    "postedBy": {
+      "type": "text"
+    }
+  },
+  "users": {
+    "email": {
+      "type": "text"
+    },
+    "name": {
+      "type": "text"
+    },
+    "bio": {
+      "type": "text"
+    },
+    "skills": {
+      "type": "keyword"
+    }
+  }
+}
