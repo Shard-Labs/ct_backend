@@ -35,8 +35,9 @@ module.exports = (sequelize, DataTypes) => {
       as: 'Sender'
     });
 
-    Message.hasMany(models.Attachment, {
-      foreignKey: 'messageId'
+    Message.belongsToMany(models.File, {
+      as: 'Attachments',
+      through: 'FileMessage',
     });
   };
 

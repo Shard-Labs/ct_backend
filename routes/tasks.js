@@ -6,22 +6,29 @@ const es = require('../lib/es');
 const models = require('../models');
 const _ = require('lodash');
 const mailer = require('../lib/mailer.js');
+const taskStatuses = require('../lib/taskStatuses.js');
 
 /**
  * Create new task
  */
 router.post('/', async (req, res) => {
   // validation
+  const attachments = Joi.object().keys({
+    id: Joi.number().required(),
+  }).optional();
+
   const schema = Joi.object().keys({
     title: Joi.string().required(),
     description: Joi.string().required(),
     price: Joi.number().min(1).integer().required(),
     worktime: Joi.number().min(1).integer().required(),
     published: Joi.boolean().optional(),
+    Attachments: Joi.array().items(attachments).optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
-    abortEarly: false
+    abortEarly: false,
+    allowUnknown: true,
   });
 
   if (validation.error) {
@@ -39,6 +46,10 @@ router.post('/', async (req, res) => {
     const tempData = { ...req.body, postedBy: req.decoded.id };
 
     taskData = await models.Task.create(tempData);
+
+    if (req.body.Attachments && req.body.Attachments.length) {
+      await taskData.setAttachments(req.body.Attachments.map(a => a.id));
+    }
   } catch (err) {
     res.status(400).json({
       success: false,
@@ -82,6 +93,10 @@ router.post('/', async (req, res) => {
   });
 });
 
+/**
+ * Delete task
+ * TODO delete attachments on s3 when deleting file
+ */
 router.delete('/:taskId', async (req, res) => {
   const taskData = await models.Task.findByPk(req.params.taskId);
 
@@ -151,6 +166,10 @@ router.put('/:taskId', async (req, res) => {
     });
   }
 
+  const attachments = Joi.object().keys({
+    id: Joi.number().required(),
+  }).optional();
+
   // validation
   const schema = Joi.object().keys({
     title: Joi.string().required(),
@@ -158,6 +177,7 @@ router.put('/:taskId', async (req, res) => {
     price: Joi.number().min(1).integer().required(),
     worktime: Joi.number().min(1).integer().required(),
     published: Joi.boolean().optional(),
+    Attachments: Joi.array().items(attachments).optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -180,6 +200,10 @@ router.put('/:taskId', async (req, res) => {
     await taskData.update(req.body, {
       fields: updatableFields
     });
+
+    if (req.body.Attachments && req.body.Attachments.length) {
+      await taskData.setAttachments(req.body.Attachments.map(a => a.id));
+    }
   } catch (err) {
     return res.status(400).json({
       success: false,
@@ -275,7 +299,7 @@ router.get('/search', async (req, res) => {
 /**
  * Apply freelancer for task
  */
-router.post('/apply/:taskId', async (req, res) => {
+router.post('/:taskId/apply', async (req, res) => {
   const taskId = req.params.taskId;
 
   try {
@@ -343,38 +367,32 @@ router.get('/my', async (req, res) => {
   const userId = req.decoded.id;
 
   // user is working on as freelancer
-  const workingOn = models.Task.findAll(/*{
+  const workingOn = models.Task.findAll({
     include: [{
       model: models.Application,
       required: true,
-      through: {
-        where: {
-          freelancerId: req.decoded.id,
-          stage: taskStatuses.WORKING,
-        }
+      where: {
+        freelancerId: req.decoded.id,
+        stage: 1,
       }
     }]
-  }*/);
+  });
 
-  const appliedFor = models.Task.findAll(/*{
+  const appliedFor = models.Task.findAll({
     include: [{
       model: models.Application,
       required: true,
-      through: {
-        where: {
-          freelancerId: req.decoded.id,
-          stage: taskStatuses.APPLIED,
-        }
+      where: {
+        freelancerId: req.decoded.id,
+        stage: 0,
       }
     }]
-  }*/);
+  });
 
   // user created as client
   const created = models.Task.findAll({
-    where: {
-      postedBy: userId,
-    },
-    include: [models.Application]
+    where: { postedBy: userId },
+    include: [{ model: models.Application, required: false }]
   });
 
   const data = await Promise.all([workingOn, created, appliedFor]);
@@ -396,7 +414,12 @@ router.get('/:taskId', async (req, res) => {
   const taskId = req.params.taskId;
 
   try {
-    const task = await models.Task.findByPk(taskId);
+    const task = await models.Task.findByPk(taskId, {
+      include: [{
+        model: models.File,
+        as: 'Attachments'
+      }]
+    });
 
     if (!task) {
       return res.status(404).json({
@@ -422,7 +445,7 @@ router.get('/:taskId', async (req, res) => {
       });
     } else { // freelancer or other users (get only applications created by them)
       applications = await models.Application.findAll({
-        where:{
+        where: {
           taskId: taskId,
           freelancerId: req.decoded.id,
         },

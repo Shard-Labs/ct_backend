@@ -106,7 +106,12 @@ class Chat {
 
       if (receiver.online && receiver.socketId) {
         // update unread messages for receiver
-        this.io.to(`${receiver.socketId}`).emit('messageReceived', application);
+        this.io.to(`${receiver.socketId}`).emit('messageReceived', {
+          id: application.id,
+          title: application.Task.title,
+          text: message.text,
+          createdAt: message.createdAt,
+        });
       } else {
         // send email notification to receiver but first check if this new message is the only one
         // if there are more unread messages then don't send notification, only on first one

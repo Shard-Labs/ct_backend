@@ -28,6 +28,6 @@
   },
   "storage": {
     "region": "eu-central-1",
-    "chatBucket": "xxx"
+    "filesBucket": "xxx"
   }
 }

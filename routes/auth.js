@@ -58,12 +58,12 @@ router.post('/register', async (req, res) => {
       text: `${config.get('frontendUrl')}/auth/confirm-email/${confirmationHash}`, // plain text body
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'User created',
     });
   } catch (err) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: 'Something went wrong',
       data: err
@@ -196,6 +196,117 @@ router.post('/email-confirm', async (req, res) => {
     });
   } catch (err) {
     return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+      data: err
+    });
+  }
+});
+
+/**
+ * Forgot password
+ */
+router.post('/forgot-password', async (req, res) => {
+  // validation
+  const schema = Joi.object().keys({
+    email: Joi.string().email().required(),
+  });
+
+  const validation = Joi.validate(req.body, schema, {
+    abortEarly: false
+  });
+
+  if (validation.error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      data: validation.error
+    });
+  }
+
+  const user = await models.User.findOne({
+    where: {
+      email: req.body.email
+    }
+  });
+
+  const resetToken = uuidv1();
+
+  user.resetToken = resetToken;
+
+  await user.save();
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found',
+    });
+  }
+
+  // send email confirmation message
+  await mailer.sendMail({
+    from: config.get('email.defaultFrom'), // sender address
+    to: req.body.email, // list of receivers
+    subject: 'Password reset - Cryptotask', // Subject line
+    text: `${config.get('frontendUrl')}/reset-password/${resetToken}`, // plain text body
+  });
+
+  return res.json({
+    success: true,
+    message: 'User created',
+  });
+});
+
+/**
+ * Reset password
+ */
+router.post('/reset-password', async (req, res) => {
+  // validation
+  const schema = Joi.object().keys({
+    password: Joi.string().min(6).required(),
+    resetToken: Joi.string().required(),
+  });
+
+  const validation = Joi.validate(req.body, schema, {
+    abortEarly: false
+  });
+
+  if (validation.error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      data: validation.error
+    });
+  }
+
+  const user = await models.User.findOne({
+    where: {
+      resetToken: req.body.resetToken,
+    },
+  });
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Invalid token',
+    });
+  }
+
+  try {
+    // create password hash
+    const salt = await bcrypt.genSalt(saltRounds);
+
+    user.password = await bcrypt.hash(req.body.password, salt);
+    user.resetToken = null;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Password changed',
+    });
+  } catch (err) {
+    return res.status(500).json({
       success: false,
       message: 'Something went wrong',
       data: err

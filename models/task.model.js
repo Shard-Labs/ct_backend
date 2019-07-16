@@ -49,6 +49,11 @@ module.exports = (sequelize, DataTypes) => {
     Task.hasMany(models.Application, {
       foreignKey: 'taskId',
     });
+
+    Task.belongsToMany(models.File, {
+      as: 'Attachments',
+      through: 'FileTask',
+    });
   };
 
   return Task;

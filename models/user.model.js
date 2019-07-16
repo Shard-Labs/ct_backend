@@ -34,6 +34,9 @@ module.exports = (sequelize, DataTypes) => {
     confirmationHash: {
       type: DataTypes.STRING,
     },
+    resetToken: {
+      type: DataTypes.STRING,
+    },
     online: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -45,7 +48,7 @@ module.exports = (sequelize, DataTypes) => {
     },
   }, {
     defaultScope: {
-      attributes: { exclude: ['password', 'confirmationHash'] },
+      attributes: { exclude: ['password', 'confirmationHash', 'resetToken'] },
     },
     scopes: {
       withPassword: {

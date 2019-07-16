@@ -4,20 +4,6 @@ const models = require('../models');
 const Op = models.Sequelize.Op;
 const config = require('config');
 const storage = require('../lib/storage.js');
-const multer = require('multer');
-const multerS3 = require('multer-s3');
-
-const upload = multer({
-  storage: multerS3({
-    s3: storage,
-    bucket: config.get('storage.chatBucket'),
-    acl: 'authenticated-read',
-    key: function (req, file, cb) {
-      const time = new Date().getTime();
-      cb(null, `${req.params.applicationId}_${time}_${file.originalname}`);
-    }
-  })
-});
 
 /**
  * Get array of application which have unread messages associated
@@ -25,7 +11,17 @@ const upload = multer({
 router.get('/unread', async (req, res) => {
   const userId = req.decoded.id;
 
-  const data = await models.sequelize.query('select A.id from Applications A right join Messages M on A.id = M.applicationId where M.read = 0 and M.senderId != :userId and (A.clientId = :userId or A.freelancerId = :userId) group by A.id;', {
+  const data = await models.sequelize.query(`select A.id, T.title, M.text, M.createdAt
+      from Applications A
+             right join Messages M on A.id = M.applicationId
+             right join (select msg.applicationId, max(msg.createdAt) createdDate
+                         from Messages msg
+                         where msg.read = 0 and msg.senderId != :userId group by msg.applicationId) one on one.applicationId = A.id and M.createdAt = one.createdDate
+             left join Tasks T on A.taskId = T.id
+      where M.read = 0
+        and M.senderId != :userId
+        and (A.clientId = :userId or A.freelancerId = :userId)
+      group by A.id;`, {
     replacements: { userId: userId },
     type: models.sequelize.QueryTypes.SELECT,
   });
@@ -71,36 +67,16 @@ router.put('/read/:applicationId', async (req, res) => {
 });
 
 /**
- * Upload attachment
- */
-router.post('/upload/:applicationId', upload.single('file'), async (req, res) => {
-  console.log('uploading file', req.file);
-
-  const file = req.file;
-
-  const attachment = await models.Attachment.create({
-    fileName: file.key,
-    type: file.mimetype,
-  });
-
-  return res.json({
-    success: true,
-    data: attachment,
-  });
-});
-
-/**
  * Get attachment data
  */
-router.get('/attachment/:id', async (req, res) => {
+router.get('/:messageId/attachment/:id', async (req, res) => {
   const userId = req.decoded.id;
   const attachmentId = req.params.id;
+  const messageId = req.params.messageId;
   const thumbnail = req.query.thumbnail;
 
   // check if user can access it
-  const attachment = await models.Attachment.findByPk(attachmentId, {
-    include: [{ model: models.Message }]
-  });
+  const attachment = await models.File.findByPk(attachmentId);
 
   if (!attachment) {
     return res.status(404).json({
@@ -109,7 +85,8 @@ router.get('/attachment/:id', async (req, res) => {
     });
   }
 
-  const application = await models.Application.findByPk(attachment.Message.applicationId);
+  const message = await models.Message.findByPk(messageId);
+  const application = await models.Application.findByPk(message.applicationId);
 
   if (application.clientId !== userId && application.freelancerId !== userId) {
     return res.status(401).json({
@@ -159,7 +136,8 @@ router.get('/:applicationId', async (req, res) => {
         model: models.User,
         as: 'Sender'
       }, {
-        model: models.Attachment,
+        model: models.File,
+        as: 'Attachments'
       }],
       limit: perPage,
       order: [

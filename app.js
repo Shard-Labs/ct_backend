@@ -18,6 +18,7 @@ const tasksRouter = require('./routes/tasks');
 const usersRouter = require('./routes/users');
 const applicationsRouter = require('./routes/applications');
 const messagesRouter = require('./routes/messages');
+const filesRouter = require('./routes/files');
 
 app.use(cors());
 app.use(logger('dev'));
@@ -31,5 +32,6 @@ app.use('/tasks', jwt.checkToken, tasksRouter);
 app.use('/users', jwt.checkToken, usersRouter);
 app.use('/applications', jwt.checkToken, applicationsRouter);
 app.use('/messages', jwt.checkToken, messagesRouter);
+app.use('/files', jwt.checkToken, filesRouter);
 
 module.exports = app;
