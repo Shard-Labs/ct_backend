@@ -10,8 +10,10 @@
     "secret": "xxx"
   },
   "es": {
-    "indexName": "cryptotask",
-    "tasksTypeName": "tasks"
+    "tasksIndexName": "tasks",
+    "tasksTypeName": "tasks",
+    "usersIndexName": "users",
+    "usersTypeName": "users"
   },
   "email": {
     "host": "url",
@@ -28,6 +30,8 @@
   },
   "storage": {
     "region": "eu-central-1",
-    "filesBucket": "xxx"
+    "filesBucket": "ct-files",
+    "chatBucket": "ct-chat-uploads",
+    "taskAttachmentsBucket": "ct-task-attachments"
   }
 }
