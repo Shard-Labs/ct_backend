@@ -2,14 +2,14 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('messages', {
+    return queryInterface.createTable('clients', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      senderId: {
+      userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -19,23 +19,30 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      applicationId: {
-        type: Sequelize.INTEGER,
+      name: {
+        type: Sequelize.STRING,
         allowNull: false,
+      },
+      location: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      pictureId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: null,
         references: {
-          model: 'applications', // name of Target model
+          model: 'files', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      text: {
-        type: Sequelize.STRING,
+      about: {
+        type: Sequelize.TEXT,
         allowNull: true,
-      },
-      read: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false,
+        defaultValue: null,
       },
       createdAt: {
         allowNull: false,
@@ -49,6 +56,6 @@ module.exports = {
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('messages');
+    return queryInterface.dropTable('clients');
   }
 };

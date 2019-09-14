@@ -2,26 +2,30 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('fileMessage', {
-      fileId: {
+    return queryInterface.createTable('freelancerLinks', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER
+      },
+      freelancerId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'files', // name of Target model
+          model: 'freelancers', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      messageId: {
-        type: Sequelize.INTEGER,
+      name: {
+        type: Sequelize.STRING,
         allowNull: false,
-        references: {
-          model: 'messages', // name of Target model
-          key: 'id', // key in Target model that we're referencing
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+      },
+      link: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
       createdAt: {
         allowNull: false,
@@ -31,16 +35,10 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE
       }
-    }, {
-      uniqueKeys: {
-        file_message_unique: {
-          fields: ['messageId', 'fileId']
-        }
-      }
     });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('fileMessage');
+    return queryInterface.dropTable('freelancerLinks');
   }
 };

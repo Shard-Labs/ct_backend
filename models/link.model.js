@@ -1,31 +1,33 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  const Attachment = sequelize.define('Attachment', {
+  const Link = sequelize.define('Link', {
     id: {
       allowNull: false,
       autoIncrement: true,
       primaryKey: true,
       type: DataTypes.INTEGER
     },
-    messageId: {
+    freelancerId: {
       type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    link: {
       allowNull: true,
+      type: DataTypes.STRING
     },
-    fileName: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    type: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
+  }, {
+    tableName: 'freelancerLinks'
   });
 
-  Attachment.associate = models => {
-    Attachment.belongsTo(models.Message, {
-      foreignKey: 'messageId'
+  Link.associate = models => {
+    Link.belongsTo(models.Freelancer, {
+      foreignKey: 'freelancerId'
     });
   };
 
-  return Attachment;
+  return Link;
 };

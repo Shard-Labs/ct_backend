@@ -1,15 +1,12 @@
 'use strict';
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('Users', {
+    return queryInterface.createTable('users', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
-      },
-      name: {
-        type: Sequelize.STRING
       },
       email: {
         type: Sequelize.STRING,
@@ -26,7 +23,9 @@ module.exports = {
         defaultValue: false,
       },
       confirmationHash: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true,
+        unique: true,
       },
       online: {
         type: Sequelize.BOOLEAN,
@@ -36,6 +35,15 @@ module.exports = {
       socketId: {
         type: Sequelize.STRING,
         defaultValue: null,
+      },
+      resetToken: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      active: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true,
       },
       createdAt: {
         allowNull: false,
@@ -48,6 +56,6 @@ module.exports = {
     });
   },
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('Users');
+    return queryInterface.dropTable('users');
   }
 };

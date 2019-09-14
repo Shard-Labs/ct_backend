@@ -2,7 +2,7 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('fileMessage', {
+    return queryInterface.createTable('freelancerProjectImage', {
       fileId: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -13,11 +13,11 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      messageId: {
+      freelancerProjectId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'messages', // name of Target model
+          model: 'freelancerProjects', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
@@ -33,14 +33,14 @@ module.exports = {
       }
     }, {
       uniqueKeys: {
-        file_message_unique: {
-          fields: ['messageId', 'fileId']
+        freelancer_project_file_unique: {
+          fields: ['freelancerProjectId', 'fileId']
         }
       }
     });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('fileMessage');
+    return queryInterface.dropTable('freelancerProjectImage');
   }
 };

@@ -1,6 +1,6 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  const File = sequelize.define('File', {
+  return sequelize.define('File', {
     id: {
       allowNull: false,
       autoIncrement: true,
@@ -19,14 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+  }, {
+    tableName: 'files',
   });
-
-  File.associate = models => {
-    File.belongsToMany(models.Message, {
-      as: 'Messages',
-      through: 'FileMessage',
-    });
-  };
-
-  return File;
 };

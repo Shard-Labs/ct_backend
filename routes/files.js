@@ -15,8 +15,8 @@ const upload = multer({
   storage: multerS3({
     s3: storage,
     bucket: (req, file, cb) => {
-      const type = req.query.type;
-      const bucket = buckets[type] || config.get('storage.filesBucket');
+      const type = req.query.type || config.get('storage.filesBucket');
+      const bucket = buckets[type];
       cb(null, bucket.bucket);
     },
     acl: (req, file, cb) => {

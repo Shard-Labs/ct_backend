@@ -2,61 +2,75 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('applications', {
+    return queryInterface.createTable('freelancers', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      taskId: {
+      userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'tasks', // name of Target model
+          model: 'users', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      clientId: {
-        type: Sequelize.INTEGER,
+      firstName: {
+        type: Sequelize.STRING,
         allowNull: false,
-        references: {
-          model: 'clients', // name of Target model
-          key: 'id', // key in Target model that we're referencing
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
-      freelancerId: {
-        type: Sequelize.INTEGER,
+      lastName: {
+        type: Sequelize.STRING,
         allowNull: false,
-        references: {
-          model: 'freelancers', // name of Target model
-          key: 'id', // key in Target model that we're referencing
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
-      invitationId: {
+      occupation: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      location: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      travel: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true,
+      },
+      pictureId: {
         type: Sequelize.INTEGER,
         allowNull: true,
+        defaultValue: null,
         references: {
-          model: 'invitations', // name of Target model
+          model: 'files', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      letter: {
+      resumeId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+        references: {
+          model: 'files', // name of Target model
+          key: 'id', // key in Target model that we're referencing
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      },
+      bio: {
         type: Sequelize.TEXT,
         allowNull: true,
+        defaultValue: null,
       },
-      status: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
+      published: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
       },
       createdAt: {
         allowNull: false,
@@ -66,16 +80,10 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE
       }
-    }, {
-      uniqueKeys: {
-        task_freelancer_unique: {
-          fields: ['taskId', 'freelancerId']
-        }
-      }
     });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('applications');
+      return queryInterface.dropTable('freelancers');
   }
 };

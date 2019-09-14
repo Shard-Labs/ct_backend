@@ -2,22 +2,22 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('fileMessage', {
-      fileId: {
+    return queryInterface.createTable('userRole', {
+      userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'files', // name of Target model
+          model: 'users', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      messageId: {
+      roleId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'messages', // name of Target model
+          model: 'roles', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
@@ -33,14 +33,14 @@ module.exports = {
       }
     }, {
       uniqueKeys: {
-        file_message_unique: {
-          fields: ['messageId', 'fileId']
+        user_role_unique: {
+          fields: ['userId', 'roleId']
         }
       }
     });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('fileMessage');
+    return queryInterface.dropTable('userRole');
   }
 };

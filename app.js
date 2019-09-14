@@ -19,6 +19,8 @@ const usersRouter = require('./routes/users');
 const applicationsRouter = require('./routes/applications');
 const messagesRouter = require('./routes/messages');
 const filesRouter = require('./routes/files');
+const utilRouter = require('./routes/util');
+const freelancersRouter = require('./routes/freelancers');
 
 app.use(cors());
 app.use(logger('dev'));
@@ -28,10 +30,12 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/auth', authRouter);
+app.use('/utils', utilRouter);
 app.use('/tasks', jwt.checkToken, tasksRouter);
 app.use('/users', jwt.checkToken, usersRouter);
 app.use('/applications', jwt.checkToken, applicationsRouter);
 app.use('/messages', jwt.checkToken, messagesRouter);
 app.use('/files', jwt.checkToken, filesRouter);
+app.use('/freelancers', jwt.checkToken, freelancersRouter);
 
 module.exports = app;

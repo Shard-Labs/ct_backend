@@ -2,7 +2,7 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('Tasks', {
+    return queryInterface.createTable('tasks', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -20,28 +20,24 @@ module.exports = {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: false,
       },
-      worktime: {
+      duration: {
         type: Sequelize.INTEGER,
         allowNull: false,
       },
-      stage: {
+      status: {
         type: Sequelize.INTEGER,
         defaultValue: 0,
         allowNull: false,
       },
       postedBy: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         references: {
-          model: 'Users', // name of Target model
+          model: 'clients', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-      },
-      published: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
       },
       createdAt: {
         allowNull: false,
@@ -60,6 +56,6 @@ module.exports = {
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('Tasks');
+    return queryInterface.dropTable('tasks');
   }
 };

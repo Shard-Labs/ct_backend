@@ -1,6 +1,6 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  const Language = sequelize.define('Language', {
+  const Category = sequelize.define('Category', {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
@@ -10,19 +10,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    nativeName: {
-      type: DataTypes.STRING,
-    },
   }, {
-    tableName: 'languages',
+    tableName: 'categories',
   });
 
-  Language.associate = models => {
-    Language.belongsToMany(models.Freelancer, {
+  Category.associate = models => {
+    Category.belongsToMany(models.Freelancer, {
       as: 'freelancers',
-      through: 'freelancerLanguage'
+      through: 'freelancerCategory'
     });
   };
 
-  return Language;
+  return Category;
 };

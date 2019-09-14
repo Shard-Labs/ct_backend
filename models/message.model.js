@@ -23,6 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+  }, {
+    tableName: 'messages',
   });
 
   Message.associate = models => {
@@ -32,12 +34,12 @@ module.exports = (sequelize, DataTypes) => {
 
     Message.belongsTo(models.User, {
       foreignKey: 'senderId',
-      as: 'Sender'
+      as: 'sender'
     });
 
     Message.belongsToMany(models.File, {
-      as: 'Attachments',
-      through: 'FileMessage',
+      as: 'attachments',
+      through: 'fileMessage',
     });
   };
 

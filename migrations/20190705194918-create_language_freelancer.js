@@ -2,22 +2,22 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('fileMessage', {
-      fileId: {
+    return queryInterface.createTable('freelancerLanguage', {
+      languageId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'files', // name of Target model
+          model: 'languages', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      messageId: {
+      freelancerId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'messages', // name of Target model
+          model: 'freelancers', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
@@ -33,14 +33,14 @@ module.exports = {
       }
     }, {
       uniqueKeys: {
-        file_message_unique: {
-          fields: ['messageId', 'fileId']
+        language_freelancer_unique: {
+          fields: ['freelancerId', 'languageId']
         }
       }
     });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('fileMessage');
+    return queryInterface.dropTable('freelancerLanguage');
   }
 };

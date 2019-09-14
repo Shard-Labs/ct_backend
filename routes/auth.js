@@ -16,9 +16,9 @@ const mailer = require('../lib/mailer.js');
 router.post('/register', async (req, res) => {
   // validation
   const schema = Joi.object().keys({
-    password: Joi.string().min(6).required(),
+    password: Joi.string().min(8).required(),
     email: Joi.string().email().required(),
-    name: Joi.string().optional(),
+    role: Joi.string().valid('freelancer', 'client').required(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -42,13 +42,20 @@ router.post('/register', async (req, res) => {
     const hash = await bcrypt.hash(req.body.password, salt);
 
     // save to database
-    await models.User.create({
+    const user = await models.User.create({
       email: req.body.email,
       password: hash,
-      name: req.body.name,
       emailConfirmed: false,
       confirmationHash: confirmationHash
     });
+
+    const role = await models.Role.findOne({
+      where: {
+        name: req.body.role
+      }
+    });
+
+    await user.addRole(role);
 
     // send email confirmation message
     await mailer.sendMail({
@@ -66,7 +73,7 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({
       success: false,
       message: 'Something went wrong',
-      data: err
+      data: err.message
     });
   }
 });
@@ -77,7 +84,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   // validation
   const schema = Joi.object().keys({
-    password: Joi.string().min(6),
+    password: Joi.string().min(8),
     email: Joi.string().email()
   });
 
@@ -97,7 +104,8 @@ router.post('/login', async (req, res) => {
     const user = await models.User.scope('withPassword').findOne({
       where: {
         email: req.body.email,
-        emailConfirmed: true
+        emailConfirmed: true,
+        active: true,
       }
     });
 
@@ -135,7 +143,6 @@ router.post('/login', async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
-          name: user.name,
         },
       }
     });
@@ -143,7 +150,7 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Something went wrong',
-      data: err
+      data: err.message
     });
   }
 });

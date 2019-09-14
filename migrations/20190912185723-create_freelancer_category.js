@@ -2,30 +2,22 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('SkillUser', {
-      id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
-        type: Sequelize.INTEGER
-      },
-      skillId: {
+    return queryInterface.createTable('freelancerCategory', {
+      categoryId: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: null,
+        allowNull: false,
         references: {
-          model: 'Skills', // name of Target model
+          model: 'categories', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      userId: {
+      freelancerId: {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: null,
+        allowNull: false,
         references: {
-          model: 'Users', // name of Target model
+          model: 'freelancers', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
@@ -39,10 +31,16 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE
       }
+    }, {
+      uniqueKeys: {
+        category_freelancer_unique: {
+          fields: ['freelancerId', 'categoryId']
+        }
+      }
     });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('SkillUser');
+    return queryInterface.dropTable('freelancerCategory');
   }
 };

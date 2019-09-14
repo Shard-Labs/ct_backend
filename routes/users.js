@@ -124,32 +124,6 @@ router.put('/me', async (req, res) => {
   }
 });
 
-/**
- * Get all skills available
- */
-router.get('/skills', async (req, res) => {
-  const skills = await models.Skill.findAll();
-
-  return res.json({
-    success: true,
-    message: 'Success',
-    data: skills,
-  });
-});
-
-/**
- * Get all languages available
- */
-router.get('/languages', async (req, res) => {
-  const languages = await models.Language.findAll();
-
-  return res.json({
-    success: true,
-    message: 'Success',
-    data: languages,
-  });
-});
-
 router.put('/password', async (req, res) => {
   const id = req.decoded.id;
 

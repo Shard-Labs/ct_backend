@@ -18,11 +18,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    worktime: {
+    duration: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    stage: {
+    status: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
       allowNull: false,
@@ -31,28 +31,33 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    published: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
   }, {
+    table: 'tasks',
     paranoid: true,
   });
 
   Task.associate = models => {
-    Task.belongsTo(models.User, {
+    Task.belongsTo(models.Client, {
       foreignKey: 'postedBy',
-      as: 'Owner',
+      as: 'owner',
     });
 
     Task.hasMany(models.Application, {
       foreignKey: 'taskId',
     });
 
+    Task.hasMany(models.Invitation, {
+      foreignKey: 'taskId',
+    });
+
     Task.belongsToMany(models.File, {
-      as: 'Attachments',
-      through: 'FileTask',
+      as: 'attachments',
+      through: 'fileTask',
+    });
+
+    Task.belongsToMany(models.Skill, {
+      as: 'skills',
+      through: 'taskSkill',
     });
   };
 

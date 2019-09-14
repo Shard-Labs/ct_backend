@@ -2,40 +2,42 @@
 
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable('messages', {
+    return queryInterface.createTable('freelancerExperiences', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      senderId: {
+      freelancerId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'users', // name of Target model
+          model: 'freelancers', // name of Target model
           key: 'id', // key in Target model that we're referencing
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      applicationId: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'applications', // name of Target model
-          key: 'id', // key in Target model that we're referencing
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
-      text: {
+      company: {
         type: Sequelize.STRING,
-        allowNull: true,
+        allowNull: false,
       },
-      read: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false,
+      title: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      from: {
+        allowNull: true,
+        type: Sequelize.DATE
+      },
+      to: {
+        allowNull: true,
+        type: Sequelize.DATE
+      },
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: true,
       },
       createdAt: {
         allowNull: false,
@@ -49,6 +51,6 @@ module.exports = {
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('messages');
+    return queryInterface.dropTable('freelancerExperiences');
   }
 };

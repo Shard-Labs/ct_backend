@@ -9,7 +9,7 @@ module.exports = {
     host: config.get('db.host'),
     dialect: 'mysql'
   },
-  test: {
+  /*test: {
     username: 'database_test',
     password: null,
     database: 'database_test',
@@ -22,5 +22,5 @@ module.exports = {
     database: config.get('db.database'),
     host: config.get('db.host'),
     dialect: 'mysql'
-  }
+  }*/
 };

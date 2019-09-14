@@ -15,17 +15,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    name: {
-      type: DataTypes.STRING,
-    },
-    bio: {
-      type: DataTypes.TEXT,
-      defaultValue: null,
-    },
-    picture: {
-      type: DataTypes.TEXT('long'),
-      defaultValue: null,
-    },
     emailConfirmed: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -33,9 +22,17 @@ module.exports = (sequelize, DataTypes) => {
     },
     confirmationHash: {
       type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
     },
     resetToken: {
       type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
+    active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     online: {
       type: DataTypes.BOOLEAN,
@@ -47,6 +44,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: null,
     },
   }, {
+    tableName: 'users',
     defaultScope: {
       attributes: { exclude: ['password', 'confirmationHash', 'resetToken'] },
     },
@@ -58,22 +56,22 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   User.associate = models => {
-    User.hasMany(models.Task, {
-      foreignKey: 'postedBy'
+    User.hasOne(models.Freelancer, {
+      foreignKey: 'userId'
     });
 
-    User.hasMany(models.Application, {
-      foreignKey: 'freelancerId'
+    User.hasOne(models.Client, {
+      foreignKey: 'userId'
     });
 
-    User.belongsToMany(models.Skill, {
-      as: 'Skills',
-      through: 'SkillUser'
+    User.hasMany(models.Message, {
+      foreignKey: 'senderId',
+      as: 'sender',
     });
 
-    User.belongsToMany(models.Language, {
-      as: 'Languages',
-      through: 'LanguageUser'
+    User.belongsToMany(models.Role, {
+      as: 'roles',
+      through: 'userRole',
     });
   };
 

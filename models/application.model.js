@@ -19,26 +19,42 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    stage: {
+    invitationId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    letter: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    status: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
     },
+  }, {
+    tableName: 'applications',
   });
 
   Application.associate = models => {
+    Application.hasMany(models.Message, {
+      foreignKey: 'applicationId'
+    });
+
     Application.belongsTo(models.Task, {
       foreignKey: 'taskId'
     });
 
-    Application.belongsTo(models.User, {
-      foreignKey: 'clientId',
-      as: 'Client'
+    Application.belongsTo(models.Invitation, {
+      foreignKey: 'invitationId'
     });
 
-    Application.belongsTo(models.User, {
+    Application.belongsTo(models.Client, {
+      foreignKey: 'clientId',
+    });
+
+    Application.belongsTo(models.Freelancer, {
       foreignKey: 'freelancerId',
-      as: 'Freelancer'
     });
   };
 
