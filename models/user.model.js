@@ -57,11 +57,13 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = models => {
     User.hasOne(models.Freelancer, {
-      foreignKey: 'userId'
+      foreignKey: 'userId',
+      as: 'freelancer'
     });
 
     User.hasOne(models.Client, {
-      foreignKey: 'userId'
+      foreignKey: 'userId',
+      as: 'client'
     });
 
     User.hasMany(models.Message, {
@@ -72,6 +74,8 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsToMany(models.Role, {
       as: 'roles',
       through: 'userRole',
+      foreignKey: 'userId',
+      otherKey: 'roleId',
     });
   };
 

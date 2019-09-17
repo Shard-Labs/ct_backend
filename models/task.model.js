@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     postedBy: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
   }, {
     table: 'tasks',

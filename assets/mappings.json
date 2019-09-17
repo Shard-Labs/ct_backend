@@ -13,7 +13,7 @@
     "price": {
       "type": "integer"
     },
-    "worktime": {
+    "duration": {
       "type": "integer"
     },
     "timePosted": {
@@ -26,11 +26,14 @@
       "type": "text"
     }
   },
-  "users": {
+  "freelancers": {
     "email": {
       "type": "text"
     },
-    "name": {
+    "firstName": {
+      "type": "text"
+    },
+    "last": {
       "type": "text"
     },
     "bio": {

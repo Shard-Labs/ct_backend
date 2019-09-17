@@ -9,15 +9,15 @@ module.exports = (sequelize, DataTypes) => {
     },
     taskId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     clientId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     freelancerId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     invitationId: {
       type: DataTypes.INTEGER,

@@ -17,6 +17,11 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      permissions: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: 'private',
+      },
       uploadedBy: {
         type: Sequelize.INTEGER,
         allowNull: false,

@@ -7,20 +7,20 @@ const multer = require('multer');
 const multerS3 = require('multer-s3');
 
 const buckets = {
-  chat: { bucket: config.get('storage.chatBucket'), permissions: 'private' },
-  task: { bucket: config.get('storage.taskAttachmentsBucket'), permissions: 'public-read' },
+  private: { bucket: config.get('storage.privateBucket'), permissions: 'private' },
+  public: { bucket: config.get('storage.publicBucket'), permissions: 'public-read' },
 };
 
 const upload = multer({
   storage: multerS3({
     s3: storage,
     bucket: (req, file, cb) => {
-      const type = req.query.type || config.get('storage.filesBucket');
+      const type = req.body.type || 'private';
       const bucket = buckets[type];
       cb(null, bucket.bucket);
     },
     acl: (req, file, cb) => {
-      const type = req.query.type;
+      const type = req.body.type || 'private';
       const item = buckets[type];
       cb(null, item ? item.permissions : 'private');
     },
@@ -40,12 +40,32 @@ router.post('/', upload.single('file'), async (req, res) => {
   const attachment = await models.File.create({
     fileName: file.key,
     type: file.mimetype,
+    permissions: req.body.type,
     uploadedBy: req.decoded.id,
   });
 
   return res.json({
     success: true,
     data: attachment,
+  });
+});
+
+/**
+ * Upload multiple attachments
+ */
+router.post('/multiple', upload.array('files'), async (req, res) => {
+  const files = req.files;
+
+  const attachments = await models.File.bulkCreate(files.map(file => ({
+    fileName: file.key,
+    type: file.mimetype,
+    permissions: req.body.type,
+    uploadedBy: req.decoded.id,
+  })));
+
+  return res.json({
+    success: true,
+    data: attachments,
   });
 });
 
@@ -83,6 +103,42 @@ router.delete('/:fileId', async (req, res) => {
       data: err
     });
   }
+});
+
+router.get('/:fileId', async (req, res) => {
+  const user = req.decoded;
+  const { fileId } = req.params;
+  const messageId = req.params.messageId;
+  const thumbnail = req.query.thumbnail;
+
+  // check if user can access it
+  const attachment = await models.File.findByPk(attachmentId);
+
+  if (!attachment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Attachment not found',
+    });
+  }
+
+  const message = await models.Message.findByPk(messageId);
+  const application = await models.Application.findByPk(message.applicationId);
+
+  if (application.clientId !== userId && application.freelancerId !== userId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized',
+    });
+  }
+
+  const key = thumbnail ? `thumbnails/${attachment.fileName}` : attachment.fileName;
+  const params = { Bucket: config.get('storage.chatBucket'), Key: key };
+  const url = await storage.getSignedUrl('getObject', params);
+
+  return res.json({
+    success: true,
+    data: url
+  });
 });
 
 module.exports = router;

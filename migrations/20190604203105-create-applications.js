@@ -11,7 +11,7 @@ module.exports = {
       },
       taskId: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'tasks', // name of Target model
           key: 'id', // key in Target model that we're referencing
@@ -21,7 +21,7 @@ module.exports = {
       },
       clientId: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'clients', // name of Target model
           key: 'id', // key in Target model that we're referencing
@@ -31,7 +31,7 @@ module.exports = {
       },
       freelancerId: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'freelancers', // name of Target model
           key: 'id', // key in Target model that we're referencing

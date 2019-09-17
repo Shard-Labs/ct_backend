@@ -85,10 +85,12 @@ module.exports = (sequelize, DataTypes) => {
 
     Freelancer.hasMany(models.Experience, {
       foreignKey: 'freelancerId',
+      as: 'workExperiences'
     });
 
     Freelancer.hasMany(models.Project, {
       foreignKey: 'freelancerId',
+      as: 'projects'
     });
 
     Freelancer.belongsToMany(models.Category, {

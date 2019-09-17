@@ -31,7 +31,7 @@ module.exports = {
       },
       postedBy: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'clients', // name of Target model
           key: 'id', // key in Target model that we're referencing
@@ -47,7 +47,7 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE
       },
-      deletedAtAt: {
+      deletedAt: {
         allowNull: true,
         defaultValue: null,
         type: Sequelize.DATE

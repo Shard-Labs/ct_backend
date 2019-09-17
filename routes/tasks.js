@@ -5,30 +5,35 @@ const config = require('config');
 const es = require('../lib/es');
 const models = require('../models');
 const _ = require('lodash');
-const mailer = require('../lib/mailer.js');
 const taskStatuses = require('../lib/taskStatuses.js');
+const isClient = require('../middleware/isClient.js');
 
 /**
  * Create new task
  */
-router.post('/', async (req, res) => {
+router.post('/', isClient, async (req, res) => {
+  const user = req.decoded;
+
   // validation
-  const attachments = Joi.object().keys({
-    id: Joi.number().required(),
+  const attachmentsSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+  }).optional();
+
+  const skillsSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
   }).optional();
 
   const schema = Joi.object().keys({
     title: Joi.string().required(),
     description: Joi.string().required(),
     price: Joi.number().min(1).integer().required(),
-    worktime: Joi.number().min(1).integer().required(),
-    published: Joi.boolean().optional(),
-    Attachments: Joi.array().items(attachments).optional(),
+    duration: Joi.number().min(1).integer().required(),
+    attachments: Joi.array().items(attachmentsSchema).optional(),
+    skills: Joi.array().items(skillsSchema).optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
     abortEarly: false,
-    allowUnknown: true,
   });
 
   if (validation.error) {
@@ -39,69 +44,196 @@ router.post('/', async (req, res) => {
     });
   }
 
-  let taskData;
+  let transaction;
 
-  // save do database
   try {
-    const tempData = { ...req.body, postedBy: req.decoded.id };
+    transaction = await models.sequelize.transaction();
 
-    taskData = await models.Task.create(tempData);
+    // save task
+    const task = await models.Task.create(_.omit(req.body, ['attachments', 'skills']), { transaction });
 
-    if (req.body.Attachments && req.body.Attachments.length) {
-      await taskData.setAttachments(req.body.Attachments.map(a => a.id));
+    // add association to client
+    await user.client.addTask(task, { transaction });
+
+    // associate attachments
+    if (req.body.attachments && req.body.attachments.length) {
+      await task.setAttachments(req.body.attachments.map(a => a.id), { transaction });
     }
-  } catch (err) {
-    res.status(400).json({
-      success: false,
-      message: 'Something went wrong',
-      data: err
-    });
-  }
 
-  // only if task is published add it to elastic search
-  if (req.body.published) {
-    const user = await models.User.findByPk(req.decoded.id);
+    // associate skills
+    if (req.body.skills && req.body.skills.length) {
+      await task.setSkills(req.body.skills.map(a => a.id), { transaction });
+    }
 
     // index to elasticsearch
-    const esData = {
+    const searchData = {
       index: config.get('es.tasksIndexName'),
-      id: taskData.id,
+      id: task.id,
       type: config.get('es.tasksTypeName'),
       body: {
-        ...req.body,
-        timePosted: taskData.createdAt,
-        stage: 0,
-        postedBy: user.name,
+        title: task.title,
+        description: task.description,
+        price: task.price,
+        duration: task.duration,
+        timePosted: task.createdAt,
+        status: taskStatuses.CREATED,
+        postedBy: user.client.name,
       }
     };
 
-    try {
-      await es.index(esData);
-    } catch (err) {
-      res.status(400).json({
-        success: false,
-        message: 'Something went wrong',
-        data: err
-      });
-    }
+    await es.index(searchData);
+
+    await transaction.commit();
+
+    return res.json({
+      success: true,
+      message: 'Task successfully created',
+      data: task,
+    });
+  } catch (err) {
+    console.error(err);
+
+    if (transaction) await transaction.rollback();
+
+    res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+      data: err.message
+    });
+  }
+});
+
+router.put('/:taskId', isClient, async (req, res) => {
+  const user = req.decoded;
+  const task = await models.Task.findByPk(req.params.taskId);
+
+  // task does not exist
+  if (!task) {
+    return res.status(404).json({
+      success: false,
+      message: 'Task not found!',
+    });
   }
 
-  return res.json({
-    success: true,
-    message: 'Task successfully saved',
-    data: taskData,
+  // user can only edit his own tasks
+  if (task.postedBy !== user.client.id) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized!',
+    });
+  }
+
+  // don't allow editing published tasks
+  if (task.status > taskStatuses.APPLIED) {
+    return res.status(400).json({
+      success: false,
+      message: 'You can not edit tasks in progress',
+    });
+  }
+
+  // validation
+  const attachmentsSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+  }).optional();
+
+  const skillsSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+  }).optional();
+
+  const schema = Joi.object().keys({
+    id: Joi.number().integer().optional(),
+    postedBy: Joi.number().integer().optional(),
+    title: Joi.string().required(),
+    description: Joi.string().required(),
+    price: Joi.number().min(1).integer().required(),
+    duration: Joi.number().min(1).integer().required(),
+    status: Joi.number().optional(),
+    attachments: Joi.array().items(attachmentsSchema).optional(),
+    skills: Joi.array().items(skillsSchema).optional(),
   });
+
+  const validation = Joi.validate(req.body, schema, {
+    abortEarly: false,
+  });
+
+  if (validation.error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      data: validation.error
+    });
+  }
+
+  const taskData = _.pick(req.body, ['title', 'description', 'price', 'duration']);
+
+  let transaction;
+
+  try {
+    transaction = await models.sequelize.transaction();
+
+    await task.update(taskData, { transaction });
+
+    const attachments = req.body.attachments ? req.body.attachments.map(a => a.id) : [];
+    const skills = req.body.skills ? req.body.skills.map(a => a.id) : [];
+
+    // set attachments
+    await task.setAttachments(attachments, { transaction });
+
+    // set skills
+    await task.setSkills(skills, { transaction });
+
+    // update in elastic
+    const searchData = {
+      index: config.get('es.tasksIndexName'),
+      id: task.id,
+      type: config.get('es.tasksTypeName'),
+      body: {
+        doc: {
+          title: task.title,
+          description: task.description,
+          price: task.price,
+          duration: task.duration,
+          timePosted: task.createdAt,
+          status: task.status,
+          postedBy: client.name,
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+
+    await es.update(searchData);
+
+    await transaction.commit();
+
+    return res.json({
+      success: true,
+      message: 'Task successfully updated',
+      data: task,
+    });
+  } catch (err) {
+    console.error(err);
+
+    if (transaction) await transaction.rollback();
+
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+      data: err.message
+    });
+  }
 });
 
 /**
  * Delete task
  * TODO delete attachments on s3 when deleting file
  */
-router.delete('/:taskId', async (req, res) => {
-  const taskData = await models.Task.findByPk(req.params.taskId);
+router.delete('/:taskId', isClient, async (req, res) => {
+  const user = req.decoded;
+
+  const task = await models.Task.findByPk(req.params.taskId);
 
   // task does not exist
-  if (!taskData) {
+  if (!task) {
     return res.status(404).json({
       success: false,
       message: 'Task not found!',
@@ -109,7 +241,7 @@ router.delete('/:taskId', async (req, res) => {
   }
 
   // user can only delete his own tasks
-  if (taskData.postedBy !== req.decoded.id) {
+  if (task.postedBy !== user.client.id) {
     return res.status(401).json({
       success: false,
       message: 'Unauthorized!',
@@ -117,7 +249,7 @@ router.delete('/:taskId', async (req, res) => {
   }
 
   try {
-    await taskData.destroy();
+    await task.destroy();
 
     // delete from elastic
     await es.delete({
@@ -131,117 +263,14 @@ router.delete('/:taskId', async (req, res) => {
       message: 'Task successfully deleted',
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(400).json({
       success: false,
       message: 'Something went wrong',
-      data: err
+      data: err.message
     });
   }
-});
-
-router.put('/:taskId', async (req, res) => {
-  const taskData = await models.Task.findByPk(req.params.taskId);
-
-  // task does not exist
-  if (!taskData) {
-    return res.status(404).json({
-      success: false,
-      message: 'Task not found!',
-    });
-  }
-
-  // user can only edit his own tasks
-  if (taskData.postedBy !== req.decoded.id) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized!',
-    });
-  }
-
-  // don't allow editing published tasks
-  if (taskData.published) {
-    return res.status(400).json({
-      success: false,
-      message: 'You can not edit published tasks',
-    });
-  }
-
-  const attachments = Joi.object().keys({
-    id: Joi.number().required(),
-  }).optional();
-
-  // validation
-  const schema = Joi.object().keys({
-    title: Joi.string().required(),
-    description: Joi.string().required(),
-    price: Joi.number().min(1).integer().required(),
-    worktime: Joi.number().min(1).integer().required(),
-    published: Joi.boolean().optional(),
-    Attachments: Joi.array().items(attachments).optional(),
-  });
-
-  const validation = Joi.validate(req.body, schema, {
-    abortEarly: false,
-    allowUnknown: true,
-  });
-
-  if (validation.error) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation error',
-      data: validation.error
-    });
-  }
-
-  const updatableFields = ['title', 'description', 'price', 'worktime', 'published'];
-
-  // save do database
-  try {
-    await taskData.update(req.body, {
-      fields: updatableFields
-    });
-
-    if (req.body.Attachments && req.body.Attachments.length) {
-      await taskData.setAttachments(req.body.Attachments.map(a => a.id));
-    }
-  } catch (err) {
-    return res.status(400).json({
-      success: false,
-      message: 'Something went wrong',
-      data: err
-    });
-  }
-
-  // index to elasticsearch if published
-  if (req.body.published) {
-    const esData = {
-      index: config.get('es.tasksIndexName'),
-      id: taskData.id,
-      type: config.get('es.tasksTypeName'),
-      body: {
-        doc: {
-          ..._.pick(req.body, updatableFields),
-        },
-        doc_as_upsert: true, // upsert if not already there
-      },
-    };
-
-    try {
-      await es.update(esData);
-    } catch (err) {
-      return res.status(400).json({
-        success: false,
-        message: 'Something went wrong',
-        data: err
-      });
-    }
-  }
-
-  return res.json({
-    success: true,
-    message: 'Task successfully saved',
-    data: taskData,
-  });
 });
 
 /**
@@ -297,172 +326,32 @@ router.get('/search', async (req, res) => {
 });
 
 /**
- * Apply freelancer for task
- */
-router.post('/:taskId/apply', async (req, res) => {
-  const taskId = req.params.taskId;
-
-  try {
-    const task = await models.Task.findByPk(taskId, {
-      include: [{
-        model: models.User,
-        as: 'Owner',
-        attributes: ['id', 'email', 'name']
-      }]
-    });
-
-    const application = await models.Application.findOne({
-      where: {
-        taskId: taskId,
-        freelancerId: req.decoded.id,
-      }
-    });
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Task not found',
-      });
-    }
-
-    if (application) {
-      return res.status(400).json({
-        success: false,
-        message: 'You have already applied for this task!',
-      });
-    }
-
-    // make new application
-    const newApp = await models.Application.create({
-      taskId: taskId,
-      clientId: task.postedBy,
-      freelancerId: req.decoded.id,
-    });
-
-    // send notification to task owner
-    await mailer.sendMail({
-      from: config.get('email.defaultFrom'), // sender address
-      to: task.Owner.email, // list of receivers
-      subject: 'New task application - Cryptotask', // Subject line
-      text: `Hi, you have new application for task ${task.title} from ${task.Owner.name}`, // plain text body
-    });
-
-    return res.json({
-      success: true,
-      data: newApp
-    });
-  } catch (err) {
-    return res.status(400).json({
-      success: false,
-      message: 'Something went wrong',
-      data: err
-    });
-  }
-});
-
-/**
- * Get current user tasks
- */
-router.get('/my', async (req, res) => {
-  const userId = req.decoded.id;
-
-  // user is working on as freelancer
-  const workingOn = models.Task.findAll({
-    include: [{
-      model: models.Application,
-      required: true,
-      where: {
-        freelancerId: req.decoded.id,
-        stage: 1,
-      }
-    }]
-  });
-
-  const appliedFor = models.Task.findAll({
-    include: [{
-      model: models.Application,
-      required: true,
-      where: {
-        freelancerId: req.decoded.id,
-        stage: 0,
-      }
-    }]
-  });
-
-  // user created as client
-  const created = models.Task.findAll({
-    where: { postedBy: userId },
-    include: [{ model: models.Application, required: false }]
-  });
-
-  const data = await Promise.all([workingOn, created, appliedFor]);
-
-  return res.json({
-    success: true,
-    data: {
-      workingOn: data[0],
-      created: data[1],
-      appliedFor: data[2],
-    },
-  });
-});
-
-/**
  * Get single task
  */
 router.get('/:taskId', async (req, res) => {
   const taskId = req.params.taskId;
 
-  try {
-    const task = await models.Task.findByPk(taskId, {
-      include: [{
-        model: models.File,
-        as: 'Attachments'
-      }]
-    });
+  const task = await models.Task.findByPk(taskId, {
+    include: [{
+      model: models.Client,
+      as: 'owner',
+    }, {
+      model: models.File,
+      as: 'attachments',
+    }]
+  });
 
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Task not found',
-      });
-    }
-
-    let applications;
-
-    if (task.postedBy === req.decoded.id) { // client who created task
-      applications = await models.Application.findAll({
-        where: {
-          taskId: taskId,
-        },
-        include: [
-          {
-            model: models.User,
-            as: 'Freelancer',
-            attributes: ['id', 'name'],
-          }
-        ]
-      });
-    } else { // freelancer or other users (get only applications created by them)
-      applications = await models.Application.findAll({
-        where: {
-          taskId: taskId,
-          freelancerId: req.decoded.id,
-        },
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: { task, applications },
-    });
-  } catch (err) {
-    return res.status(400).json({
+  if (!task) {
+    return res.status(404).json({
       success: false,
-      message: 'Something went wrong',
-      data: err
+      message: 'Task not found',
     });
   }
+
+  return res.json({
+    success: true,
+    data: task,
+  });
 });
 
 module.exports = router;

@@ -17,6 +17,7 @@ router.post('/register', async (req, res) => {
   // validation
   const schema = Joi.object().keys({
     password: Joi.string().min(8).required(),
+    passwordConfirmation: Joi.string().min(8).required().valid(Joi.ref('password')),
     email: Joi.string().email().required(),
     role: Joi.string().valid('freelancer', 'client').required(),
   });
@@ -36,7 +37,11 @@ router.post('/register', async (req, res) => {
   // create email confirmation hash
   const confirmationHash = uuidv1();
 
+  let transaction;
+
   try {
+    transaction = await models.sequelize.transaction();
+
     // create password hash
     const salt = await bcrypt.genSalt(saltRounds);
     const hash = await bcrypt.hash(req.body.password, salt);
@@ -47,29 +52,35 @@ router.post('/register', async (req, res) => {
       password: hash,
       emailConfirmed: false,
       confirmationHash: confirmationHash
-    });
+    }, { transaction });
 
     const role = await models.Role.findOne({
       where: {
         name: req.body.role
       }
-    });
+    }, { transaction });
 
-    await user.addRole(role);
+    await user.addRole(role, { transaction });
 
     // send email confirmation message
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: req.body.email, // list of receivers
       subject: 'Email confirmation - Cryptotask', // Subject line
-      text: `${config.get('frontendUrl')}/auth/confirm-email/${confirmationHash}`, // plain text body
+      text: `${config.get('frontendUrl')}/confirm-email/${confirmationHash}`, // plain text body
     });
+
+    await transaction.commit();
 
     return res.json({
       success: true,
       message: 'User created',
     });
   } catch (err) {
+    console.error(err);
+
+    if (transaction) await transaction.rollback();
+
     return res.status(400).json({
       success: false,
       message: 'Something went wrong',
@@ -129,7 +140,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       {
         id: user.id,
-        email: req.body.email,
+        email: user.email,
       },
       config.get('jwt.secret'),
       { expiresIn: '24h' }
@@ -138,13 +149,7 @@ router.post('/login', async (req, res) => {
     return res.json({
       success: true,
       message: 'User successfully logged in',
-      data: {
-        token: token,
-        user: {
-          id: user.id,
-          email: user.email,
-        },
-      }
+      data: { token }
     });
   } catch (err) {
     return res.status(500).json({

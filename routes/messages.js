@@ -12,8 +12,8 @@ router.get('/unread', async (req, res) => {
   const userId = req.decoded.id;
 
   const data = await models.sequelize.query(`select A.id, T.title, M.text, M.createdAt
-      from Applications A
-             right join Messages M on A.id = M.applicationId
+      from applications A
+             right join messages M on A.id = M.applicationId
              right join (select msg.applicationId, max(msg.createdAt) createdDate
                          from Messages msg
                          where msg.read = 0 and msg.senderId != :userId group by msg.applicationId) one on one.applicationId = A.id and M.createdAt = one.createdDate

@@ -15,7 +15,7 @@ module.exports = {
       },
       freelancerProjectId: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'freelancerProjects', // name of Target model
           key: 'id', // key in Target model that we're referencing

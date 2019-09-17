@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('config');
+const models = require('../models');
 
 const checkToken = function (req, res, next) {
   let token = req.headers['x-access-token'] || req.headers['authorization']; // Express headers are auto converted to lowercase
@@ -25,8 +26,30 @@ const checkToken = function (req, res, next) {
         error: 'invalid_token'
       });
     } else {
-      req.decoded = decoded;
-      next();
+      models.User.findByPk(decoded.id, {
+        include: [
+          {
+            model: models.Freelancer, as: 'freelancer', include: [
+              { model: models.File, as: 'avatar' },
+              { model: models.File, as: 'resume' },
+              { model: models.Skill, as: 'skills' },
+              { model: models.Category, as: 'categories' },
+              { model: models.Experience, as: 'workExperiences' },
+              {
+                model: models.Project, as: 'projects', include: [
+                  { model: models.File, as: 'cover' },
+                  { model: models.File, as: 'images' },
+                ]
+              },
+            ]
+          },
+          { model: models.Client, as: 'client' },
+          { model: models.Role, as: 'roles' },
+        ]
+      }).then((user) => {
+        req.decoded = user;
+        next();
+      });
     }
   });
 };

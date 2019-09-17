@@ -10,9 +10,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    nativeName: {
-      type: DataTypes.STRING,
-    },
   }, {
     tableName: 'languages',
   });

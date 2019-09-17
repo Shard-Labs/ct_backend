@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     freelancerId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     pictureId: {
       type: DataTypes.INTEGER,
@@ -48,7 +48,9 @@ module.exports = (sequelize, DataTypes) => {
 
     Project.belongsToMany(models.File, {
       as: 'images',
-      through: 'freelancerProjectImage'
+      through: 'freelancerProjectImage',
+      foreignKey: 'freelancerProjectId',
+      otherKey: 'fileId',
     });
   };
 

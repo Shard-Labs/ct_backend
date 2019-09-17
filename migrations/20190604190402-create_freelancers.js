@@ -72,6 +72,21 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
       },
+      linkedin: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      web: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      blog: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

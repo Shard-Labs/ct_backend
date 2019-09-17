@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     freelancerId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     company: {
       type: DataTypes.STRING,

@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const models = require('../models');
 const Joi = require('@hapi/joi');
-const es = require('../lib/es');
-const config = require('config');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -11,119 +9,16 @@ const saltRounds = 10;
  * Get current user data
  */
 router.get('/me', async (req, res) => {
-  const id = req.decoded.id;
-
-  if (id) {
-    try {
-      const user = await models.User.findByPk(id, {
-        include: [
-          {
-            model: models.Skill,
-            as: 'Skills'
-          },
-          {
-            model: models.Language,
-            as: 'Languages'
-          }
-        ]
-      });
-
-      return res.json({
-        success: true,
-        message: 'Success',
-        data: user,
-      });
-    } catch (err) {
-      return res.status(400).json({
-        success: false,
-        message: 'Something went wrong',
-        data: err
-      });
-    }
-  }
+  return res.json({
+    success: true,
+    message: 'Success',
+    data: req.decoded,
+  });
 });
 
 /**
- * Update current user data
+ * Update user password
  */
-router.put('/me', async (req, res) => {
-  const id = req.decoded.id;
-
-  const schema = Joi.object().keys({
-    name: Joi.string().optional(),
-    bio: Joi.string().optional(),
-    picture: Joi.string().optional(),
-    Skills: Joi.array().items(Joi.object().keys({
-      id: Joi.number().required()
-    })).optional(),
-    Languages: Joi.array().items(Joi.object().keys({
-      id: Joi.number().required()
-    })).optional(),
-  });
-
-  const validation = Joi.validate(req.body, schema, {
-    abortEarly: false,
-    allowUnknown: true,
-  });
-
-  if (validation.error) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation error',
-      data: validation.error
-    });
-  }
-
-  try {
-    const user = await models.User.findByPk(id);
-
-    user.name = req.body.name;
-    user.bio = req.body.bio;
-    user.picture = req.body.picture;
-
-    const skills = req.body.Skills || [];
-    const languages = req.body.Languages || [];
-
-    await user.setSkills(skills.map(s => s.id));
-    await user.setLanguages(languages.map(s => s.id));
-
-    await user.save();
-
-    user.setDataValue('Skills', await user.getSkills());
-    user.setDataValue('Languages', await user.getLanguages());
-
-    // add data to elastic
-    const esData = {
-      index: config.get('es.usersIndexName'),
-      id: user.id,
-      type: config.get('es.usersTypeName'),
-      body: {
-        doc: {
-          email: user.email,
-          name: user.name,
-          skills: skills.map(s => s.name),
-          languages: languages.map(s => s.name),
-        },
-        doc_as_upsert: true, // upsert if not already there
-      },
-    };
-
-    await es.update(esData);
-
-    return res.json({
-      success: true,
-      message: 'Success',
-      data: user,
-    });
-  } catch (err) {
-    return res.status(400).json({
-      success: false,
-      message: 'Something went wrong',
-      data: err
-    });
-  }
-});
-
 router.put('/password', async (req, res) => {
   const id = req.decoded.id;
 

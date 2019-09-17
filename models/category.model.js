@@ -19,6 +19,10 @@ module.exports = (sequelize, DataTypes) => {
       as: 'freelancers',
       through: 'freelancerCategory'
     });
+
+    Category.hasMany(models.Skill, {
+      as: 'skills',
+    });
   };
 
   return Category;
