@@ -19,7 +19,7 @@ const initEs = async (index) => {
 
   await esClient.indices.putMapping({
     index: config.get(`es.${index}IndexName`),
-    type: config.get(`es.${index}TypeName`),
+    // type: config.get(`es.${index}TypeName`),
     body: {
       properties: mappings[index]
     }
