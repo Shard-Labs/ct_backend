@@ -40,6 +40,7 @@ module.exports = (sequelize, DataTypes) => {
 
     Client.belongsTo(models.File, {
       foreignKey: 'pictureId',
+      as: 'avatar',
     });
 
     Client.hasMany(models.Task, {

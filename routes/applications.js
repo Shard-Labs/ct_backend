@@ -5,20 +5,36 @@ const mailer = require('../lib/mailer.js');
 const isFreelancer = require('../middleware/isFreelancer.js');
 const isClient = require('../middleware/isClient.js');
 
+const statuses = {
+  CREATED: 0,
+  ACCEPTED: 1,
+  FINISHED: 2,
+  CANCELED: 3,
+  REJECTED: 4,
+};
+
 /**
  * Get all freelancer applications with related tasks and clients
  */
 router.get('/', isFreelancer, async (req, res) => {
   const user = req.decoded;
+  const status = req.query.status || statuses.CREATED;
 
-  const applications = await models.Application.find({
+  const applications = await models.Application.findAll({
     where: {
       freelancerId: user.freelancer.id,
-    }
-  }, {
+      status,
+    },
     include: [
-      { model: models.Task, required: false, },
-      { model: models.Client, required: false, },
+      {
+        model: models.Task,
+        as: 'task',
+        required: false,
+        include: [
+          { model: models.Skill, as: 'skills' },
+        ]
+      },
+      { model: models.Client, as: 'client', required: false, },
     ]
   });
 
@@ -61,7 +77,15 @@ router.get('/:applicationId', async (req, res) => {
 
   const application = await models.Application.findByPk(applicationId, {
     include: [
-      { model: models.Task, required: false, }
+      {
+        model: models.Task,
+        as: 'task',
+        required: false,
+        include: [
+          { model: models.Skill, as: 'skills' },
+        ]
+      },
+      { model: models.Client, as: 'client', required: false, },
     ]
   });
 
@@ -146,17 +170,17 @@ router.post('/', isFreelancer, async (req, res) => {
 
     // make new application
     const newApp = await models.Application.create({
-      letter: req.body.letter,
+      letter: req.body.letter || null,
     }, { transaction });
 
     // associate with task
     await newApp.setTask(task, { transaction });
 
     // associate with freelancer
-    await newApp.setFreelancer(user.freelancer, { transaction });
+    await newApp.setFreelancer(user.freelancer.id, { transaction });
 
     //associate with client
-    await newApp.setClient(task.owner, { transaction });
+    await newApp.setClient(task.owner.id, { transaction });
 
     // send notification to task owner
     // TODO update TO: field with user email
@@ -166,6 +190,8 @@ router.post('/', isFreelancer, async (req, res) => {
       subject: 'New task application - Cryptotask', // Subject line
       text: `Hi, you have new application for task ${task.title} from ${task.Owner.name}`, // plain text body
     });*/
+
+    await transaction.commit();
 
     return res.json({
       success: true,

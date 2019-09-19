@@ -7,6 +7,7 @@ const models = require('../models');
 const _ = require('lodash');
 const taskStatuses = require('../lib/taskStatuses.js');
 const isClient = require('../middleware/isClient.js');
+const Op = models.Sequelize.Op;
 
 /**
  * Create new task
@@ -28,12 +29,13 @@ router.post('/', isClient, async (req, res) => {
     description: Joi.string().required(),
     price: Joi.number().min(1).integer().required(),
     duration: Joi.number().min(1).integer().required(),
-    attachments: Joi.array().items(attachmentsSchema).optional(),
-    skills: Joi.array().items(skillsSchema).optional(),
+    attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
+    skills: Joi.array().items(skillsSchema).optional().allow(null),
   });
 
   const validation = Joi.validate(req.body, schema, {
     abortEarly: false,
+    allowUnknown: true,
   });
 
   if (validation.error) {
@@ -78,6 +80,7 @@ router.post('/', isClient, async (req, res) => {
         timePosted: task.createdAt,
         status: taskStatuses.CREATED,
         postedBy: user.client.name,
+        skills: req.body.skills ? req.body.skills.map(s => s.name) : [],
       }
     };
 
@@ -154,6 +157,7 @@ router.put('/:taskId', isClient, async (req, res) => {
 
   const validation = Joi.validate(req.body, schema, {
     abortEarly: false,
+    allowUnknown: true,
   });
 
   if (validation.error) {
@@ -195,7 +199,7 @@ router.put('/:taskId', isClient, async (req, res) => {
           duration: task.duration,
           timePosted: task.createdAt,
           status: task.status,
-          postedBy: client.name,
+          postedBy: user.client.name,
         },
         doc_as_upsert: true, // upsert if not already there
       },
@@ -326,19 +330,101 @@ router.get('/search', async (req, res) => {
 });
 
 /**
+ * Get tasks that client created
+ */
+router.get('/my', isClient, async (req, res) => {
+  const user = req.decoded;
+  const orderBy = req.query.order;
+  const searchTerm = req.query.term;
+
+  const where = {
+    postedBy: user.client.id
+  };
+
+  if (searchTerm) {
+    where.title = {
+      [Op.like]: '%' + searchTerm + '%'
+    };
+  }
+
+  let order = ['createdAt', 'DESC'];
+
+  if (orderBy) {
+    order = orderBy.split(',');
+  }
+
+  const tasks = await models.Task.findAll({
+    where,
+    order: [order],
+    include: [
+      { model: models.Skill, as: 'skills' },
+    ]
+  });
+
+  return res.json({
+    success: true,
+    data: tasks,
+  });
+});
+
+/**
  * Get single task
  */
 router.get('/:taskId', async (req, res) => {
   const taskId = req.params.taskId;
+  const user = req.decoded;
+
+  const include = [{
+    model: models.Client,
+    as: 'owner',
+    include: [
+      {
+        model: models.File,
+        as: 'avatar',
+      }
+    ]
+  }, {
+    model: models.File,
+    as: 'attachments',
+  }, {
+    model: models.Skill,
+    as: 'skills',
+  }];
+
+  if (user.freelancer) {
+    include.push({
+      model: models.Application,
+      as: 'applications',
+      where: {
+        freelancerId: user.freelancer.id
+      },
+      required: false,
+    });
+  } else if (user.client) {
+    include.push({
+      model: models.Application,
+      as: 'applications',
+      where: {
+        clientId: user.client.id
+      },
+      required: false,
+      include: [
+        {
+          model: models.Freelancer,
+          as: 'freelancer',
+          include: [
+            {
+              model: models.File,
+              as: 'avatar',
+            }
+          ]
+        },
+      ]
+    });
+  }
 
   const task = await models.Task.findByPk(taskId, {
-    include: [{
-      model: models.Client,
-      as: 'owner',
-    }, {
-      model: models.File,
-      as: 'attachments',
-    }]
+    include
   });
 
   if (!task) {

@@ -188,6 +188,8 @@ router.put('/', isFreelancer, async (req, res) => {
 
 /**
  * Publish freelancer profile
+ *
+ * TODO add freelancer to elastic on publish
  */
 router.put('/publish', isFreelancer, async (req, res) => {
   const user = req.decoded;

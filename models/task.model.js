@@ -44,10 +44,12 @@ module.exports = (sequelize, DataTypes) => {
 
     Task.hasMany(models.Application, {
       foreignKey: 'taskId',
+      as: 'applications',
     });
 
     Task.hasMany(models.Invitation, {
       foreignKey: 'taskId',
+      as: 'invitations',
     });
 
     Task.belongsToMany(models.File, {

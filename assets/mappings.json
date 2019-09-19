@@ -24,6 +24,9 @@
     },
     "postedBy": {
       "type": "text"
+    },
+    "skills": {
+      "type": "keyword"
     }
   },
   "freelancers": {

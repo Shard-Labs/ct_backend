@@ -42,7 +42,8 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Application.belongsTo(models.Task, {
-      foreignKey: 'taskId'
+      foreignKey: 'taskId',
+      as: 'task',
     });
 
     Application.belongsTo(models.Invitation, {
@@ -51,10 +52,12 @@ module.exports = (sequelize, DataTypes) => {
 
     Application.belongsTo(models.Client, {
       foreignKey: 'clientId',
+      as: 'client',
     });
 
     Application.belongsTo(models.Freelancer, {
       foreignKey: 'freelancerId',
+      as: 'freelancer',
     });
   };
 

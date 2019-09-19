@@ -43,7 +43,11 @@ const checkToken = function (req, res, next) {
               },
             ]
           },
-          { model: models.Client, as: 'client' },
+          {
+            model: models.Client, as: 'client', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
           { model: models.Role, as: 'roles' },
         ]
       }).then((user) => {
