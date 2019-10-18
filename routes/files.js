@@ -15,14 +15,14 @@ const upload = multer({
   storage: multerS3({
     s3: storage,
     bucket: (req, file, cb) => {
-      const type = req.body.type || 'private';
+      const type = req.body.type || 'public';
       const bucket = buckets[type];
       cb(null, bucket.bucket);
     },
     acl: (req, file, cb) => {
-      const type = req.body.type || 'private';
+      const type = req.body.type || 'public';
       const item = buckets[type];
-      cb(null, item ? item.permissions : 'private');
+      cb(null, item ? item.permissions : 'public');
     },
     key: (req, file, cb) => {
       const time = new Date().getTime();
@@ -74,8 +74,7 @@ router.post('/multiple', upload.array('files'), async (req, res) => {
  */
 router.delete('/:fileId', async (req, res) => {
   const attachment = await models.File.findByPk(req.params.fileId);
-  const type = req.query.type;
-  const bucket = buckets[type] || config.get('storage.filesBucket');
+  const bucket = buckets[attachment.permissions];
 
   if (attachment.uploadedBy !== req.decoded.id) {
     return res.status(401).json({
@@ -84,61 +83,74 @@ router.delete('/:fileId', async (req, res) => {
     });
   }
 
+  let transaction;
+
   try {
+    transaction = await models.sequelize.transaction();
+
     const params = {
       bucket,
       key: attachment.fileName
     };
 
     await storage.deleteObject(params);
-    await attachment.destroy();
+    await attachment.destroy({ transaction });
+    await transaction.commit();
 
     return res.json({
       success: true,
     });
   } catch (err) {
+    console.error(err);
+
+    if (transaction) await transaction.rollback();
+
     return res.status(500).json({
       success: false,
       message: 'Something went wrong',
-      data: err
     });
   }
 });
 
+/**
+ * Get private file signed url
+ */
 router.get('/:fileId', async (req, res) => {
-  const user = req.decoded;
   const { fileId } = req.params;
-  const messageId = req.params.messageId;
   const thumbnail = req.query.thumbnail;
 
-  // check if user can access it
-  const attachment = await models.File.findByPk(attachmentId);
+  const file = await models.File.findByPk(fileId);
 
-  if (!attachment) {
+  if (!file) {
     return res.status(404).json({
       success: false,
-      message: 'Attachment not found',
+      message: 'File not found',
     });
   }
 
-  const message = await models.Message.findByPk(messageId);
-  const application = await models.Application.findByPk(message.applicationId);
+  if (file.permissions === 'public') {
+    return res.json({
+      success: true,
+      message: 'File is public, you can access it using bucket public url',
+    });
+  }
 
-  if (application.clientId !== userId && application.freelancerId !== userId) {
-    return res.status(401).json({
+  try {
+    const key = thumbnail ? `thumbnails/${file.fileName}` : file.fileName;
+    const params = { Bucket: config.get('storage.privateBucket'), Key: key };
+    const url = await storage.getSignedUrl('getObject', params);
+
+    return res.json({
+      success: true,
+      data: url,
+    });
+  } catch (err) {
+    return res.status(400).json({
       success: false,
-      message: 'Unauthorized',
+      message: 'Something went wrong',
+      data: err.message
     });
   }
-
-  const key = thumbnail ? `thumbnails/${attachment.fileName}` : attachment.fileName;
-  const params = { Bucket: config.get('storage.chatBucket'), Key: key };
-  const url = await storage.getSignedUrl('getObject', params);
-
-  return res.json({
-    success: true,
-    data: url
-  });
 });
 
 module.exports = router;

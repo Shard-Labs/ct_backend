@@ -18,6 +18,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    name: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return `${this.firstName} ${this.lastName}`;
+      }
+    },
     occupation: {
       type: DataTypes.STRING,
       allowNull: true,

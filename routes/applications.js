@@ -57,7 +57,7 @@ router.get('/task/:taskId', isClient, async (req, res) => {
     }
   }, {
     include: [
-      { model: models.Task, required: false, },
+      { model: models.Task, required: false, as: 'task' },
       { model: models.Freelancer, required: false, },
     ]
   });

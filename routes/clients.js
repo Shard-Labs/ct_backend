@@ -4,6 +4,7 @@ const models = require('../models');
 const _ = require('lodash');
 const Joi = require('@hapi/joi');
 const isClient = require('../middleware/isClient.js');
+const storage = require('../lib/storage.js');
 
 /**
  * Create new client user
@@ -150,6 +151,43 @@ router.put('/', isClient, async (req, res) => {
       data: err.message
     });
   }
+});
+
+/**
+ * Get clients avatar signed URL from amazon S3
+ */
+router.get('/:clientId/avatar', async (req, res) => {
+  const clientId = req.params.clientId;
+
+  const client = await models.Client.findByPk(clientId, {
+    include: [
+      { model: models.File, as: 'avatar' }
+    ]
+  });
+
+  if (client.avatar) {
+    try {
+      const key = client.avatar.fileName;
+      const params = { Bucket: config.get('storage.privateBucket'), Key: key };
+      const url = await storage.getSignedUrl('getObject', params);
+
+      return res.json({
+        success: true,
+        data: url,
+      });
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: 'Something went wrong',
+        data: err.message
+      });
+    }
+  }
+
+  return res.status(404).json({
+    success: false,
+    message: 'Avatar not found',
+  });
 });
 
 module.exports = router;

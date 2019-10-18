@@ -42,11 +42,14 @@ class Chat {
     console.log('subscribing to application', applicationId, this.socket.decoded_token);
 
     const application = await models.Application.findByPk(applicationId, {
-      include: [models.Task]
+      include: [
+        { model: models.Client, as: 'client' },
+        { model: models.Freelancer, as: 'freelancer' },
+      ]
     });
 
     // check if user can be subscribed
-    if (application && this.userId === application.freelancerId || this.userId === application.Task.postedBy) {
+    if (application && this.userId === application.client.userId || this.userId === application.freelancer.userId) {
       this.socket.join(applicationId);
       this.socket.emit('subscribed');
       this.io.to(applicationId).emit('userSubscribed', this.userId);
@@ -71,35 +74,57 @@ class Chat {
    * @param {String} text
    * @param {Number} applicationId
    * @param {Array} [attachmentIds] - if there are attachments in message send their ids (optional)
+   * @param {String} role - current user active role
    * @return {Promise<void>}
    */
-  async sendMessage({ text, applicationId, attachmentIds }) {
-    console.log('send message', applicationId, text, this.userId);
+  async sendMessage({ text, applicationId, attachmentIds, role }) {
+    console.log('send message', applicationId, text, role, this.userId);
 
     const application = await models.Application.findByPk(applicationId, {
-      include: [models.Task]
+      include: [
+        { model: models.Client, as: 'client' },
+        { model: models.Freelancer, as: 'freelancer' },
+        { model: models.Task, as: 'task' },
+      ]
     });
 
     // check if user can send messages to this application
-    if (application && this.userId === application.freelancerId || this.userId === application.Task.postedBy) {
+    if (application && this.userId === application.client.userId || this.userId === application.freelancer.userId) {
       const message = await models.Message.create({
         senderId: this.userId,
-        applicationId: applicationId,
-        text: text
+        applicationId,
+        text,
+        role
       });
 
-      message.setDataValue('Sender', await message.getSender());
+      message.setDataValue('sender', await message.getSender({
+        include: [
+          {
+            model: models.Freelancer, as: 'freelancer', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
+          {
+            model: models.Client, as: 'client', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
+          { model: models.Role, as: 'roles' },
+        ]
+      }));
 
       if (attachmentIds && attachmentIds.length) {
         await message.setAttachments(attachmentIds);
       }
 
-      message.setDataValue('Attachments', await message.getAttachments());
+      message.setDataValue('attachments', await message.getAttachments());
 
       this.io.in(applicationId).emit('messageSent', message);
 
       // set receiver user ID
-      const receiverId = this.userId === application.clientId ? application.freelancerId : application.clientId;
+      const receiverId = this.userId === application.client.userId
+        ? application.freelancer.userId
+        : application.client.userId;
 
       // check if receiver online
       const receiver = await models.User.findByPk(receiverId);
@@ -110,6 +135,7 @@ class Chat {
           id: application.id,
           title: application.Task.title,
           text: message.text,
+          role: message.role,
           createdAt: message.createdAt,
         });
       } else {
@@ -130,7 +156,7 @@ class Chat {
             from: config.get('email.defaultFrom'), // sender address
             to: receiver.email, // list of receivers
             subject: 'You have new unread message - Cryptotask', // Subject line
-            text: `You have new message for task ${application.Task.title}`, // plain text body
+            text: `You have new message for task ${application.task.title}`, // plain text body
           });
         }
       }
@@ -144,9 +170,14 @@ class Chat {
    */
   async messageRead(applicationId) {
     // check if user can update application
-    const application = await models.Application.findByPk(applicationId);
+    const application = await models.Application.findByPk(applicationId, {
+      include: [
+        { model: models.Client, as: 'client' },
+        { model: models.Freelancer, as: 'freelancer' },
+      ]
+    });
 
-    if (this.userId === application.clientId || this.userId === application.freelancerId) {
+    if (this.userId === application.client.userId || this.userId === application.freelancer.userId) {
       await models.Message.update(
         { read: true },
         {
@@ -159,6 +190,34 @@ class Chat {
         }
       );
     }
+  }
+
+  /**
+   * Emit that user is typing
+   * @param {Object} data
+   * @param {String} data.userName
+   * @param {Number} data.applicationId
+   * @return {Promise<void>}
+   */
+  async startedTyping(data) {
+    this.io.in(data.applicationId).emit('userTyping', {
+      id: this.userId,
+      name: data.userName
+    });
+  }
+
+  /**
+   * Emit when user stopped typing
+   * @param {Object} data
+   * @param {String} data.userName
+   * @param {Number} data.applicationId
+   * @return {Promise<void>}
+   */
+  async stoppedTyping(data) {
+    this.io.in(data.applicationId).emit('userStoppedTyping', {
+      id: this.userId,
+      name: data.userName
+    });
   }
 }
 

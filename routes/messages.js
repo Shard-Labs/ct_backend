@@ -40,9 +40,14 @@ router.put('/read/:applicationId', async (req, res) => {
   const { applicationId } = req.params;
 
   // check if user can update application
-  const application = await models.Application.findByPk(applicationId);
+  const application = await models.Application.findByPk(applicationId, {
+    include: [
+      { model: models.Client, as: 'client' },
+      { model: models.Freelancer, as: 'freelancer' },
+    ]
+  });
 
-  if (userId !== application.clientId && userId !== application.freelancerId) {
+  if (userId !== application.client.userId && userId !== application.freelancer.userId) {
     return res.status(401).json({
       success: false,
       message: 'Unauthorized',
@@ -67,45 +72,6 @@ router.put('/read/:applicationId', async (req, res) => {
 });
 
 /**
- * Get attachment data
- */
-router.get('/:messageId/attachment/:id', async (req, res) => {
-  const userId = req.decoded.id;
-  const attachmentId = req.params.id;
-  const messageId = req.params.messageId;
-  const thumbnail = req.query.thumbnail;
-
-  // check if user can access it
-  const attachment = await models.File.findByPk(attachmentId);
-
-  if (!attachment) {
-    return res.status(404).json({
-      success: false,
-      message: 'Attachment not found',
-    });
-  }
-
-  const message = await models.Message.findByPk(messageId);
-  const application = await models.Application.findByPk(message.applicationId);
-
-  if (application.clientId !== userId && application.freelancerId !== userId) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized',
-    });
-  }
-
-  const key = thumbnail ? `thumbnails/${attachment.fileName}` : attachment.fileName;
-  const params = { Bucket: config.get('storage.chatBucket'), Key: key };
-  const url = await storage.getSignedUrl('getObject', params);
-
-  return res.json({
-    success: true,
-    data: url
-  });
-});
-
-/**
  * Get all messages for task application
  */
 router.get('/:applicationId', async (req, res) => {
@@ -115,52 +81,68 @@ router.get('/:applicationId', async (req, res) => {
   const lastId = req.query.lastId;
 
   const application = await models.Application.findByPk(applicationId, {
-    include: [models.Task]
+    include: [
+      { model: models.Client, as: 'client' },
+      { model: models.Freelancer, as: 'freelancer' },
+    ]
   });
 
-  // check if current user can access application messages
-  if (userId === application.freelancerId || userId === application.Task.postedBy) {
-    const conditions = {
-      applicationId: req.params.applicationId,
-    };
-
-    if (lastId) {
-      conditions['id'] = {
-        [Op.lt]: lastId,
-      };
-    }
-
-    const messages = await models.Message.findAll({
-      where: conditions,
-      include: [{
-        model: models.User,
-        as: 'Sender'
-      }, {
-        model: models.File,
-        as: 'Attachments'
-      }],
-      limit: perPage,
-      order: [
-        ['id', 'DESC'],
-      ],
-    });
-
-    // get total of messages for pagination
-    const total = await models.Message.count({
-      where: {
-        applicationId: applicationId,
-      }
-    });
-
-    return res.json({
-      success: true,
-      data: { messages, total }
+  // check if user has access to messages
+  if (userId !== application.client.userId && userId !== application.freelancer.userId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized',
     });
   }
 
-  return res.status(401).json({
-    success: false,
-    message: 'Unauthorized',
+  const conditions = {
+    applicationId: req.params.applicationId,
+  };
+
+  if (lastId) {
+    conditions['id'] = {
+      [Op.lt]: lastId,
+    };
+  }
+
+  const messages = await models.Message.findAll({
+    where: conditions,
+    include: [{
+      model: models.User,
+      as: 'sender',
+      include: [
+        {
+          model: models.Freelancer, as: 'freelancer', include: [
+            { model: models.File, as: 'avatar' },
+          ]
+        },
+        {
+          model: models.Client, as: 'client', include: [
+            { model: models.File, as: 'avatar' },
+          ]
+        },
+        { model: models.Role, as: 'roles' },
+      ]
+    }, {
+      model: models.File,
+      as: 'attachments'
+    }],
+    limit: perPage,
+    order: [
+      ['id', 'DESC'],
+    ],
+  });
+
+  // get total of messages for pagination
+  const total = await models.Message.count({
+    where: {
+      applicationId: applicationId,
+    }
+  });
+
+  return res.json({
+    success: true,
+    data: { messages, total }
   });
 });
 

@@ -5,6 +5,7 @@ const _ = require('lodash');
 const Joi = require('@hapi/joi');
 const isFreelancer = require('../middleware/isFreelancer.js');
 const asyncForEach = require('../lib/asyncForEach.js');
+const storage = require('../lib/storage.js');
 
 /**
  * Get all freelancers available

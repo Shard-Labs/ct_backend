@@ -11,12 +11,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    role: {
+      type: DataTypes.STRING,
+    },
     applicationId: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
     text: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     read: {

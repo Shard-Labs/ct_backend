@@ -31,6 +31,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    location: {
+      type: DataTypes.ENUM('onsite', 'remote'),
+    },
+    type: {
+      type: DataTypes.ENUM('fulltime', 'parttime'),
+    },
   }, {
     table: 'tasks',
     paranoid: true,
