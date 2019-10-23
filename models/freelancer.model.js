@@ -12,16 +12,16 @@ module.exports = (sequelize, DataTypes) => {
     },
     firstName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     name: {
       type: DataTypes.VIRTUAL,
       get() {
-        return `${this.firstName} ${this.lastName}`;
+        return this.firstName && this.lastName ? `${this.firstName} ${this.lastName}` : '';
       }
     },
     occupation: {

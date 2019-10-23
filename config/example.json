@@ -11,9 +11,7 @@
   },
   "es": {
     "tasksIndexName": "tasks",
-    "tasksTypeName": "tasks",
-    "usersIndexName": "users",
-    "usersTypeName": "users"
+    "freelancersIndexName": "freelancers"
   },
   "email": {
     "host": "url",

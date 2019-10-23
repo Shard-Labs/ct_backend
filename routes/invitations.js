@@ -3,6 +3,7 @@ const router = express.Router();
 const models = require('../models');
 const mailer = require('../lib/mailer.js');
 const isClient = require('../middleware/isClient.js');
+const config = require('config');
 
 /**
  * Get all invitations for task
@@ -84,7 +85,10 @@ router.post('/', isClient, async (req, res) => {
       include: [{
         model: models.Client,
         as: 'owner',
-        attributes: ['id', 'userId']
+        attributes: ['id', 'userId', 'name'],
+        include: [
+          { model: models.User },
+        ],
       }],
       transaction
     });
@@ -119,25 +123,21 @@ router.post('/', isClient, async (req, res) => {
 
     // make new invitation
     const newInvitation = await models.Invitation.create({
+      freelancerId: req.body.freelancerId,
+      taskId: req.body.taskId,
+      clientId: user.client.id,
       letter: req.body.letter,
     }, { transaction });
 
-    // associate with task
-    await newInvitation.setTask(task, { transaction });
-
-    // associate with freelancer
-    await newInvitation.setFreelancer(freelancerId, { transaction });
-
-    //associate with client
-    await newInvitation.setClient(user.client, { transaction });
-
     // send notification to freelancer
-    /*await mailer.sendMail({
+    await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: task.Owner.email, // list of receivers
+      to: task.owner.User.email, // list of receivers
       subject: 'New task invitation - Cryptotask', // Subject line
-      text: `Hi, you have new invitation for task ${task.title} from ${task.Owner.name}`, // plain text body
-    });*/
+      text: `Hi, you have new invitation for task ${task.title} from ${task.owner.name}`, // plain text body
+    });
+
+    await transaction.commit();
 
     return res.json({
       success: true,

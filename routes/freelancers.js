@@ -5,19 +5,112 @@ const _ = require('lodash');
 const Joi = require('@hapi/joi');
 const isFreelancer = require('../middleware/isFreelancer.js');
 const asyncForEach = require('../lib/asyncForEach.js');
-const storage = require('../lib/storage.js');
+const es = require('../lib/es');
+const config = require('config');
 
 /**
- * Get all freelancers available
+ * Search freelancers
  */
 router.get('/', async (req, res) => {
-  const categories = await models.Category.findAll();
+  const q = req.query.q;
+  const page = req.query.page || 1;
+  const perPage = req.query.perPage || 20;
+  const from = (page - 1) * perPage;
+  const category = req.query.category;
 
-  return res.json({
-    success: true,
-    message: 'Success',
-    data: categories,
-  });
+  const searchBody = {
+    from: from,
+    size: perPage,
+  };
+
+  if (q) {
+    _.set(searchBody, 'query.bool.must.multi_match', {
+      query: q,
+      fields: ['firstName', 'lastName', 'bio', 'skills', 'categories', 'occupation', 'location'],
+    });
+
+    _.set(searchBody, 'query.bool.filter', [
+      { term: { published: true, }, },
+    ]);
+  } else {
+    // simple initial load with no filtering
+    searchBody['query'] = {
+      bool: {
+        must: [
+          { term: { published: true, } },
+        ],
+      },
+    };
+  }
+
+  if (category) {
+    _.set(searchBody, 'query.bool.filter.1', { term: { categories: category, }, });
+  }
+
+  console.log(JSON.stringify(searchBody));
+
+  try {
+    const result = await es.search({
+      index: config.get('es.freelancersIndexName'),
+      body: searchBody,
+    });
+
+    return res.json({
+      success: true,
+      data: result.hits
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+      data: err
+    });
+  }
+});
+
+router.get('/:id', async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const freelancer = await models.Freelancer.findOne({
+      where: {
+        id,
+        published: true,
+      },
+      include: [
+        { model: models.File, as: 'avatar' },
+        { model: models.File, as: 'resume' },
+        { model: models.Skill, as: 'skills' },
+        { model: models.Category, as: 'categories' },
+        { model: models.Experience, as: 'workExperiences' },
+        {
+          model: models.Project, as: 'projects', include: [
+            { model: models.File, as: 'cover' },
+            { model: models.File, as: 'images' },
+          ]
+        },
+      ]
+    });
+
+    if (!freelancer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Freelancer does not exist!',
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: freelancer
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
 });
 
 /**
@@ -87,6 +180,15 @@ router.post('/', async (req, res) => {
     if (freelancerData.avatar) {
       await freelancer.setAvatar(freelancerData.avatar.id, { transaction });
     }
+
+    // index to elasticsearch
+    const searchData = {
+      index: config.get('es.freelancersIndexName'),
+      id: freelancer.id,
+      type: '_doc',
+      body: _.pick(req.body, ['firstName', 'lastName', 'occupation', 'location', 'bio', 'avatar']),
+    };
+    await es.index(searchData);
 
     await transaction.commit();
 
@@ -164,6 +266,21 @@ router.put('/', isFreelancer, async (req, res) => {
       await user.freelancer.removeAvatar({ transaction });
     }
 
+    // update in elastic
+    const searchData = {
+      index: config.get('es.freelancersIndexName'),
+      id: user.freelancer.id,
+      type: '_doc',
+      body: {
+        doc: {
+          ..._.pick(req.body, ['firstName', 'lastName', 'occupation', 'location', 'bio', 'avatar']),
+          published: user.freelancer.published,
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+    await es.update(searchData);
+
     await transaction.commit();
 
     // fetch it all on the end
@@ -189,8 +306,6 @@ router.put('/', isFreelancer, async (req, res) => {
 
 /**
  * Publish freelancer profile
- *
- * TODO add freelancer to elastic on publish
  */
 router.put('/publish', isFreelancer, async (req, res) => {
   const user = req.decoded;
@@ -198,6 +313,20 @@ router.put('/publish', isFreelancer, async (req, res) => {
   try {
     user.freelancer.published = true;
     await user.freelancer.save();
+
+    // update in elastic
+    const searchData = {
+      index: config.get('es.freelancersIndexName'),
+      id: user.freelancer.id,
+      type: '_doc',
+      body: {
+        doc: {
+          published: true,
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+    await es.update(searchData);
 
     return res.json({
       success: true,
@@ -230,6 +359,21 @@ router.put('/skills', isFreelancer, async (req, res) => {
 
     await user.freelancer.setSkills(skills.map(s => s.id), { transaction });
     await user.freelancer.setCategories(categories.map(s => s.id), { transaction });
+
+    // update in elastic
+    const searchData = {
+      index: config.get('es.freelancersIndexName'),
+      id: user.freelancer.id,
+      type: '_doc',
+      body: {
+        doc: {
+          skills: skills.map(s => s.name),
+          categories: categories.map(s => s.name),
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+    await es.update(searchData);
 
     await transaction.commit();
 

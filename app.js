@@ -22,6 +22,7 @@ const filesRouter = require('./routes/files');
 const utilRouter = require('./routes/util');
 const freelancersRouter = require('./routes/freelancers');
 const clientsRouter = require('./routes/clients');
+const invitationsRouter = require('./routes/invitations');
 
 app.use(cors());
 app.use(logger('dev'));
@@ -39,5 +40,6 @@ app.use('/messages', jwt.checkToken, messagesRouter);
 app.use('/files', jwt.checkToken, filesRouter);
 app.use('/freelancers', jwt.checkToken, freelancersRouter);
 app.use('/clients', jwt.checkToken, clientsRouter);
+app.use('/invitations', jwt.checkToken, invitationsRouter);
 
 module.exports = app;

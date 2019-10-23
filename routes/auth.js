@@ -34,6 +34,20 @@ router.post('/register', async (req, res) => {
     });
   }
 
+  // check if email already exists
+  const exists = await models.User.findOne({
+    where: {
+      email: req.body.email,
+    },
+  });
+
+  if (exists) {
+    return res.status(400).json({
+      success: false,
+      message: 'User with same email address already exists',
+    });
+  }
+
   // create email confirmation hash
   const confirmationHash = uuidv1();
 
@@ -61,6 +75,19 @@ router.post('/register', async (req, res) => {
     }, { transaction });
 
     await user.addRole(role, { transaction });
+
+    // create default profiles
+    if (req.body.role === 'freelancer') {
+      await models.Freelancer.create({
+        userId: user.id
+      }, { transaction });
+    }
+
+    if (req.body.role === 'client') {
+      await models.Client.create({
+        userId: user.id
+      }, { transaction });
+    }
 
     // send email confirmation message
     await mailer.sendMail({

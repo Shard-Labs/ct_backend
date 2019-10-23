@@ -30,20 +30,33 @@
     }
   },
   "freelancers": {
-    "email": {
-      "type": "text"
-    },
     "firstName": {
       "type": "text"
     },
-    "last": {
+    "lastName": {
+      "type": "text"
+    },
+    "location": {
+      "type": "text"
+    },
+    "occupation": {
       "type": "text"
     },
     "bio": {
       "type": "text"
     },
+    "categories": {
+      "type": "keyword"
+    },
     "skills": {
       "type": "keyword"
+    },
+    "published": {
+      "type": "boolean"
+    },
+    "avatar": {
+      "type": "object",
+      "enabled": false
     }
   }
 }

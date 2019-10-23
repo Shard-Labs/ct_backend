@@ -19,7 +19,7 @@ const initEs = async (index) => {
 
   await esClient.indices.putMapping({
     index: config.get(`es.${index}IndexName`),
-    // type: config.get(`es.${index}TypeName`),
+    type: '_doc',
     body: {
       properties: mappings[index]
     }
@@ -31,7 +31,7 @@ const initEs = async (index) => {
 console.log('::::::::: initiating elastic search indices :::::::::');
 
 Promise.all([
-  initEs('tasks'),
-  initEs('users'),
+  // initEs('tasks'),
+  initEs('freelancers'),
 ]).then((res) => console.log(res))
   .catch((err) => console.log(err));

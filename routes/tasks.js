@@ -71,7 +71,7 @@ router.post('/', isClient, async (req, res) => {
     const searchData = {
       index: config.get('es.tasksIndexName'),
       id: task.id,
-      type: config.get('es.tasksTypeName'),
+      type: '_doc',
       body: {
         title: task.title,
         description: task.description,
@@ -190,7 +190,7 @@ router.put('/:taskId', isClient, async (req, res) => {
     const searchData = {
       index: config.get('es.tasksIndexName'),
       id: task.id,
-      type: config.get('es.tasksTypeName'),
+      type: '_doc',
       body: {
         doc: {
           title: task.title,
@@ -259,7 +259,7 @@ router.delete('/:taskId', isClient, async (req, res) => {
     await es.delete({
       index: config.get('es.tasksIndexName'),
       id: req.params.taskId,
-      type: config.get('es.tasksTypeName'),
+      type: '_doc',
     });
 
     return res.json({
