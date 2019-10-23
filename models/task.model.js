@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('fulltime', 'parttime'),
     },
   }, {
-    table: 'tasks',
+    tableName: 'tasks',
     paranoid: true,
   });
 
