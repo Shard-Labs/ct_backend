@@ -135,7 +135,10 @@ router.post('/', isFreelancer, async (req, res) => {
       include: [{
         model: models.Client,
         as: 'owner',
-        attributes: ['id', 'userId', 'email']
+        attributes: ['id', 'userId'],
+        include: [
+          { model: models.User, attributes: ['id', 'email'] }
+        ]
       }],
       transaction
     });
@@ -186,7 +189,7 @@ router.post('/', isFreelancer, async (req, res) => {
     // TODO update TO: field with user email
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: task.owner.email, // list of receivers
+      to: task.owner.User.email, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
       text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
     });
