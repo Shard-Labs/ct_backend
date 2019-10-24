@@ -52,7 +52,10 @@ router.post('/', isClient, async (req, res) => {
     transaction = await models.sequelize.transaction();
 
     // save task
-    const task = await models.Task.create(_.omit(req.body, ['attachments', 'skills']), { transaction });
+    const task = await models.Task.create({
+      ..._.omit(req.body, ['attachments', 'skills']),
+      featured: true
+    }, { transaction });
 
     // add association to client
     await user.client.addTask(task, { transaction });

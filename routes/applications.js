@@ -135,7 +135,7 @@ router.post('/', isFreelancer, async (req, res) => {
       include: [{
         model: models.Client,
         as: 'owner',
-        attributes: ['id', 'userId']
+        attributes: ['id', 'userId', 'email']
       }],
       transaction
     });
@@ -184,12 +184,12 @@ router.post('/', isFreelancer, async (req, res) => {
 
     // send notification to task owner
     // TODO update TO: field with user email
-    /*await mailer.sendMail({
+    await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: task.owner.email, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
-      text: `Hi, you have new application for task ${task.title} from ${task.Owner.name}`, // plain text body
-    });*/
+      text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
+    });
 
     await transaction.commit();
 
@@ -202,10 +202,40 @@ router.post('/', isFreelancer, async (req, res) => {
 
     if (transaction) await transaction.rollback();
 
-    return res.status(400).json({
+    return res.status(500).json({
       success: false,
       message: 'Something went wrong',
-      data: err.message
+    });
+  }
+});
+
+/**
+ * Accept freelancers application
+ */
+router.put('/:applicationId/hire', isClient, async (req, res) => {
+  const user = req.decoded;
+  const application = await models.Application.findByPk(req.params.applicationId);
+
+  if (application.clientId !== user.client.id) {
+    return res.status(401).json({
+      success: false,
+      message: 'Not allowed',
+    });
+  }
+
+  try {
+    application.status = statuses.ACCEPTED;
+    await application.save();
+
+    return res.json({
+      success: true,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Something went wrong',
     });
   }
 });

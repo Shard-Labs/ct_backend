@@ -79,7 +79,8 @@ router.post('/register', async (req, res) => {
     // create default profiles
     if (req.body.role === 'freelancer') {
       await models.Freelancer.create({
-        userId: user.id
+        userId: user.id,
+        featured: true,
       }, { transaction });
     }
 
