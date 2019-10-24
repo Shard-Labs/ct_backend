@@ -4,6 +4,7 @@ const models = require('../models');
 const mailer = require('../lib/mailer.js');
 const isFreelancer = require('../middleware/isFreelancer.js');
 const isClient = require('../middleware/isClient.js');
+const config = require('config');
 
 const statuses = {
   CREATED: 0,
