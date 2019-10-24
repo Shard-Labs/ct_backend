@@ -133,7 +133,7 @@ class Chat {
         // update unread messages for receiver
         this.io.to(`${receiver.socketId}`).emit('messageReceived', {
           id: application.id,
-          title: application.Task.title,
+          title: application.task.title,
           text: message.text,
           role: message.role,
           createdAt: message.createdAt,
