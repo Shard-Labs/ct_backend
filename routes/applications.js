@@ -186,16 +186,15 @@ router.post('/', isFreelancer, async (req, res) => {
     //associate with client
     await newApp.setClient(task.owner.id, { transaction });
 
+    await transaction.commit();
+
     // send notification to task owner
-    // TODO update TO: field with user email
-    await mailer.sendMail({
+    mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: task.owner.User.email, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
       text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
     });
-
-    await transaction.commit();
 
     return res.json({
       success: true,
