@@ -37,6 +37,10 @@ module.exports = (sequelize, DataTypes) => {
     type: {
       type: DataTypes.ENUM('fulltime', 'parttime'),
     },
+    featured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
   }, {
     tableName: 'tasks',
     paranoid: true,

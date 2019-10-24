@@ -80,7 +80,6 @@ router.post('/register', async (req, res) => {
     if (req.body.role === 'freelancer') {
       await models.Freelancer.create({
         userId: user.id,
-        featured: true,
       }, { transaction });
     }
 
