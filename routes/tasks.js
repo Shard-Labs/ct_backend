@@ -5,9 +5,9 @@ const config = require('config');
 const es = require('../lib/es');
 const models = require('../models');
 const _ = require('lodash');
-const taskStatuses = require('../lib/taskStatuses.js');
 const isClient = require('../middleware/isClient.js');
 const Op = models.Sequelize.Op;
+const constants = require('../lib/constants.js');
 
 /**
  * Create new task
@@ -27,6 +27,8 @@ router.post('/', isClient, async (req, res) => {
   const schema = Joi.object().keys({
     title: Joi.string().required(),
     description: Joi.string().required(),
+    location: Joi.string().required(),
+    type: Joi.string().required(),
     price: Joi.number().min(1).integer().required(),
     duration: Joi.number().min(1).integer().required(),
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
@@ -78,7 +80,7 @@ router.post('/', isClient, async (req, res) => {
         price: task.price,
         duration: task.duration,
         timePosted: task.createdAt,
-        status: taskStatuses.CREATED,
+        status: constants.taskStatuses.CREATED,
         postedBy: user.client.name,
         skills: req.body.skills ? req.body.skills.map(s => s.name) : [],
       }
@@ -106,6 +108,9 @@ router.post('/', isClient, async (req, res) => {
   }
 });
 
+/**
+ * Edit task
+ */
 router.put('/:taskId', isClient, async (req, res) => {
   const user = req.decoded;
   const task = await models.Task.findByPk(req.params.taskId);
@@ -127,7 +132,7 @@ router.put('/:taskId', isClient, async (req, res) => {
   }
 
   // don't allow editing published tasks
-  if (task.status > taskStatuses.APPLIED) {
+  if (task.status > constants.taskStatuses.CREATED) {
     return res.status(400).json({
       success: false,
       message: 'You can not edit tasks in progress',
@@ -153,6 +158,8 @@ router.put('/:taskId', isClient, async (req, res) => {
     status: Joi.number().optional(),
     attachments: Joi.array().items(attachmentsSchema).optional(),
     skills: Joi.array().items(skillsSchema).optional(),
+    location: Joi.string().required(),
+    type: Joi.string().required(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -168,7 +175,7 @@ router.put('/:taskId', isClient, async (req, res) => {
     });
   }
 
-  const taskData = _.pick(req.body, ['title', 'description', 'price', 'duration']);
+  const taskData = _.pick(req.body, ['title', 'description', 'price', 'duration', 'location', 'type']);
 
   let transaction;
 
@@ -200,6 +207,7 @@ router.put('/:taskId', isClient, async (req, res) => {
           timePosted: task.createdAt,
           status: task.status,
           postedBy: user.client.name,
+          skills: req.body.skills ? req.body.skills.map(s => s.name) : [],
         },
         doc_as_upsert: true, // upsert if not already there
       },

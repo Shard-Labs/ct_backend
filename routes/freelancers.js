@@ -47,8 +47,6 @@ router.get('/', async (req, res) => {
     _.set(searchBody, 'query.bool.filter.1', { term: { categories: category, }, });
   }
 
-  console.log(JSON.stringify(searchBody));
-
   try {
     const result = await es.search({
       index: config.get('es.freelancersIndexName'),
@@ -260,11 +258,7 @@ router.put('/', isFreelancer, async (req, res) => {
     // update freelancer record
     await user.freelancer.update(freelancerData, { transaction, });
 
-    if (freelancerData.avatar) {
-      await user.freelancer.setAvatar(freelancerData.avatar.id, { transaction });
-    } else {
-      await user.freelancer.removeAvatar({ transaction });
-    }
+    await user.freelancer.setAvatar(freelancerData.avatar ? freelancerData.avatar.id : null, { transaction });
 
     // update in elastic
     const searchData = {
@@ -464,7 +458,6 @@ router.delete('/resume', isFreelancer, async (req, res) => {
 router.put('/experience', isFreelancer, async (req, res) => {
   const user = req.decoded;
 
-  // validation
   const experienceSchema = Joi.object().keys({
     company: Joi.string().required(),
     title: Joi.string().required(),
@@ -473,7 +466,10 @@ router.put('/experience', isFreelancer, async (req, res) => {
     description: Joi.string().optional().allow(null),
   }).optional();
 
-  const schema = Joi.array().items(experienceSchema);
+  const schema = Joi.object().keys({
+    resume: Joi.string().optional().allow(null),
+    items: Joi.array().items(experienceSchema),
+  });
 
   const validation = Joi.validate(req.body, schema, {
     abortEarly: false,
@@ -494,9 +490,26 @@ router.put('/experience', isFreelancer, async (req, res) => {
     transaction = await models.sequelize.transaction();
 
     // bulk create all the experiences
-    const experiences = await models.Experience.bulkCreate(req.body, { transaction });
+    const items = req.body.items.map(i => {
+      return _.omit(i, ['id']);
+    });
+
+    const experiences = await models.Experience.bulkCreate(items, { transaction });
 
     await user.freelancer.setWorkExperiences(experiences, { transaction });
+
+    // cleanup DB from obsolete data
+    await models.Experience.destroy({
+      where: {
+        freelancerId: null
+      },
+      transaction,
+    });
+
+    // update resume data
+    user.freelancer.resume = req.body.resume;
+
+    await user.freelancer.save({ transaction });
 
     await transaction.commit();
 
@@ -574,8 +587,15 @@ router.put('/projects', isFreelancer, async (req, res) => {
       projects.push(project.id);
     });
 
-    // TODO this only updates old projects, make them disappear somehow
     await user.freelancer.setProjects(projects, { transaction });
+
+    // cleanup DB from obsolete data
+    await models.Project.destroy({
+      where: {
+        freelancerId: null
+      },
+      transaction,
+    });
 
     await transaction.commit();
 

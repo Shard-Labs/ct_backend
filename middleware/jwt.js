@@ -31,7 +31,7 @@ const checkToken = function (req, res, next) {
           {
             model: models.Freelancer, as: 'freelancer', include: [
               { model: models.File, as: 'avatar' },
-              { model: models.File, as: 'resume' },
+              // { model: models.File, as: 'resume' },
               { model: models.Skill, as: 'skills' },
               { model: models.Category, as: 'categories' },
               { model: models.Experience, as: 'workExperiences' },

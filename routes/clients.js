@@ -127,11 +127,7 @@ router.put('/', isClient, async (req, res) => {
     // update client record
     const data = await user.client.update(clientData, { transaction });
 
-    if (clientData.avatar) {
-      await user.client.setAvatar(clientData.avatar.id, { transaction });
-    } else {
-      await user.client.removeAvatar({ transaction });
-    }
+    await user.client.setAvatar(clientData.avatar ? clientData.avatar.id : null, { transaction });
 
     await transaction.commit();
 

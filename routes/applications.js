@@ -5,21 +5,14 @@ const mailer = require('../lib/mailer.js');
 const isFreelancer = require('../middleware/isFreelancer.js');
 const isClient = require('../middleware/isClient.js');
 const config = require('config');
-
-const statuses = {
-  CREATED: 0,
-  ACCEPTED: 1,
-  FINISHED: 2,
-  CANCELED: 3,
-  REJECTED: 4,
-};
+const constants = require('../lib/constants.js');
 
 /**
  * Get all freelancer applications with related tasks and clients
  */
 router.get('/', isFreelancer, async (req, res) => {
   const user = req.decoded;
-  const status = req.query.status || statuses.CREATED;
+  const status = req.query.status || constants.applicationStatuses.CREATED;
 
   const applications = await models.Application.findAll({
     where: {
@@ -102,7 +95,7 @@ router.get('/:applicationId', async (req, res) => {
   let isAllowed = user.freelancer && application.freelancerId === user.freelancer.id;
 
   if (!isAllowed) {
-    isAllowed = user.client && application.Task.postedBy === user.client.id;
+    isAllowed = user.client && application.task.postedBy === user.client.id;
   }
 
   if (!isAllowed) {
@@ -226,15 +219,30 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
     });
   }
 
+  const task = await models.Task.findByPk(application.taskId);
+
+  let transaction;
+
   try {
-    application.status = statuses.ACCEPTED;
-    await application.save();
+    transaction = await models.sequelize.transaction();
+
+    // update application status to accepted
+    application.status = constants.applicationStatuses.ACCEPTED;
+    await application.save({ transaction });
+
+    // update task status to Hired
+    task.status = constants.taskStatuses.HIRED;
+    await task.save({ transaction });
+
+    await transaction.commit();
 
     return res.json({
       success: true,
     });
   } catch (err) {
     console.error(err);
+
+    if (transaction) await transaction.rollback();
 
     return res.status(500).json({
       success: false,

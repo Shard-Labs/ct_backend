@@ -43,8 +43,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: null,
     },
-    resumeId: {
-      type: DataTypes.INTEGER,
+    resume: {
+      type: DataTypes.TEXT,
       allowNull: true,
       defaultValue: null,
     },
@@ -75,10 +75,10 @@ module.exports = (sequelize, DataTypes) => {
       as: 'avatar',
     });
 
-    Freelancer.belongsTo(models.File, {
+    /* Freelancer.belongsTo(models.File, {
       foreignKey: 'resumeId',
       as: 'resume',
-    });
+    }); */
 
     Freelancer.hasMany(models.Application, {
       foreignKey: 'freelancerId',
