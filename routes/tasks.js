@@ -22,6 +22,7 @@ router.post('/', isClient, async (req, res) => {
 
   const skillsSchema = Joi.object().keys({
     id: Joi.number().integer().required(),
+    categoryId: Joi.number().integer().required(),
   }).optional();
 
   const schema = Joi.object().keys({
@@ -69,6 +70,20 @@ router.post('/', isClient, async (req, res) => {
       await task.setSkills(req.body.skills.map(a => a.id), { transaction });
     }
 
+    // fetch categories for elastic indexing
+    const categoryIds = req.body.skills.map(a => a.categoryId);
+    let categories = [];
+
+    if (categoryIds.length) {
+      categories = await models.Category.findAll({
+        where: {
+          id: {
+            [Op.in]: _.uniq(categoryIds)
+          }
+        }
+      });
+    }
+
     // index to elasticsearch
     const searchData = {
       index: config.get('es.tasksIndexName'),
@@ -80,9 +95,11 @@ router.post('/', isClient, async (req, res) => {
         price: task.price,
         duration: task.duration,
         timePosted: task.createdAt,
+        location: task.location,
         status: constants.taskStatuses.CREATED,
         postedBy: user.client.name,
         skills: req.body.skills ? req.body.skills.map(s => s.name) : [],
+        categories: categories.map(s => s.name),
       }
     };
 
@@ -146,6 +163,7 @@ router.put('/:taskId', isClient, async (req, res) => {
 
   const skillsSchema = Joi.object().keys({
     id: Joi.number().integer().required(),
+    categoryId: Joi.number().integer().required(),
   }).optional();
 
   const schema = Joi.object().keys({
@@ -193,6 +211,20 @@ router.put('/:taskId', isClient, async (req, res) => {
     // set skills
     await task.setSkills(skills, { transaction });
 
+    // fetch categories for elastic indexing
+    const categoryIds = req.body.skills.map(a => a.categoryId);
+    let categories = [];
+
+    if (categoryIds.length) {
+      categories = await models.Category.findAll({
+        where: {
+          id: {
+            [Op.in]: _.uniq(categoryIds)
+          }
+        }
+      });
+    }
+
     // update in elastic
     const searchData = {
       index: config.get('es.tasksIndexName'),
@@ -206,8 +238,10 @@ router.put('/:taskId', isClient, async (req, res) => {
           duration: task.duration,
           timePosted: task.createdAt,
           status: task.status,
+          location: task.location,
           postedBy: user.client.name,
           skills: req.body.skills ? req.body.skills.map(s => s.name) : [],
+          categories: categories.map(s => s.name),
         },
         doc_as_upsert: true, // upsert if not already there
       },
@@ -296,6 +330,7 @@ router.get('/search', async (req, res) => {
   const sortBy = req.query.sortBy || 'timePosted';
   const sortDir = req.query.sortDir || 'desc';
   const sort = {};
+  const category = req.query.category;
 
   sort[sortBy] = sortDir;
 
@@ -306,16 +341,14 @@ router.get('/search', async (req, res) => {
   };
 
   if (q) {
-    searchBody['query'] = {
-      multi_match: {
-        query: q,
-        fields: ['title', 'description']
-      }
-    };
-  } else {
-    searchBody['query'] = {
-      match_all: {}
-    };
+    _.set(searchBody, 'query.bool.must.multi_match', {
+      query: q,
+      fields: ['title', 'description'],
+    });
+  }
+
+  if (category) {
+    _.set(searchBody, 'query.bool.filter.0', { term: { categories: category, }, });
   }
 
   try {

@@ -25,7 +25,13 @@
     "postedBy": {
       "type": "text"
     },
+    "location": {
+      "type": "text"
+    },
     "skills": {
+      "type": "keyword"
+    },
+    "categories": {
       "type": "keyword"
     }
   },

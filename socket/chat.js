@@ -15,7 +15,6 @@ class Chat {
    * @return {Promise<void>}
    */
   async setUserOnline() {
-    console.log('setting user as online', this.userId);
     const user = await models.User.findByPk(this.userId);
     user.online = true;
     user.socketId = this.socket.id;
@@ -39,8 +38,6 @@ class Chat {
    * @return {Promise<void>}
    */
   async subscribe(applicationId) {
-    console.log('subscribing to application', applicationId, this.socket.decoded_token);
-
     const application = await models.Application.findByPk(applicationId, {
       include: [
         { model: models.Client, as: 'client' },
@@ -62,8 +59,6 @@ class Chat {
    * @return {Promise<void>}
    */
   async unsubscribe(applicationId) {
-    console.log('unsubscribing from application', applicationId);
-
     this.socket.leave(applicationId);
     this.socket.emit('unsubscribed');
     this.io.to(applicationId).emit('userUnsubscribed', this.userId);
@@ -78,8 +73,6 @@ class Chat {
    * @return {Promise<void>}
    */
   async sendMessage({ text, applicationId, attachmentIds, role }) {
-    console.log('send message', applicationId, text, role, this.userId);
-
     const application = await models.Application.findByPk(applicationId, {
       include: [
         { model: models.Client, as: 'client' },
