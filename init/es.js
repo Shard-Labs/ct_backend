@@ -31,7 +31,7 @@ const initEs = async (index) => {
 console.log('::::::::: initiating elastic search indices :::::::::');
 
 Promise.all([
-  // initEs('tasks'),
+  initEs('tasks'),
   initEs('freelancers'),
 ]).then((res) => console.log(res))
   .catch((err) => console.log(err));
