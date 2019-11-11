@@ -1,17 +1,38 @@
 # Cryptotask backend
 
-## Installation
-
-- git clone https://repo_url
-- yarn install
-- npx sequelize-cli db:migrate
-- yarn start
-
 ## Requirements
 
 - MySQL or MariaDB
-- Node.js (some newer version)
-- Yarn (or npm, but yarn is faster and better)
+- Node.js
+- Yarn
+- Elasticsearch
+
+## Installation
+
+Clone this repo:
+```
+git clone https://repo_url
+```
+
+Install all dependencies:
+```
+yarn install
+```
+
+Run migrations on MySQL database to create all tables and database stuff:
+```
+npx sequelize-cli db:migrate
+```
+
+Create mappings on Elasticsearch:
+```
+node init/es.js
+```
+
+Run application:
+```
+yarn start or nodemon start
+```
 
 ## Setup
 

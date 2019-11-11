@@ -219,6 +219,17 @@ router.post('/', async (req, res) => {
 router.put('/', isFreelancer, async (req, res) => {
   const user = req.decoded;
 
+  const skillsSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+    name: Joi.string().required(),
+    categoryId: Joi.number().integer().required(),
+  }).optional();
+
+  const categoriesSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+    name: Joi.string().required(),
+  }).optional();
+
   // validation
   const schema = Joi.object().keys({
     firstName: Joi.string().required(),
@@ -233,6 +244,8 @@ router.put('/', isFreelancer, async (req, res) => {
     avatar: Joi.object().keys({
       id: Joi.number().integer().required(),
     }).optional().allow(null),
+    skills: Joi.array().items(skillsSchema).optional(),
+    categories: Joi.array().items(categoriesSchema).optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -260,6 +273,14 @@ router.put('/', isFreelancer, async (req, res) => {
 
     await user.freelancer.setAvatar(freelancerData.avatar ? freelancerData.avatar.id : null, { transaction });
 
+    const skills = req.body.skills;
+    const categories = req.body.categories;
+
+    if (skills && categories) {
+      await user.freelancer.setSkills(skills.map(s => s.id), { transaction });
+      await user.freelancer.setCategories(categories.map(s => s.id), { transaction });
+    }
+
     // update in elastic
     const searchData = {
       index: config.get('es.freelancersIndexName'),
@@ -267,7 +288,16 @@ router.put('/', isFreelancer, async (req, res) => {
       type: '_doc',
       body: {
         doc: {
-          ..._.pick(req.body, ['firstName', 'lastName', 'occupation', 'location', 'bio', 'avatar']),
+          ..._.pick(req.body, [
+            'firstName',
+            'lastName',
+            'occupation',
+            'location',
+            'bio',
+            'avatar',
+          ]),
+          skills: skills.map(s => s.name),
+          categories: categories.map(s => s.name),
           published: user.freelancer.published,
         },
         doc_as_upsert: true, // upsert if not already there
@@ -278,7 +308,13 @@ router.put('/', isFreelancer, async (req, res) => {
     await transaction.commit();
 
     // fetch it all on the end
-    const data = await models.Freelancer.findByPk(user.freelancer.id);
+    const data = await models.Freelancer.findByPk(user.freelancer.id, {
+      include: [
+        { model: models.Skill, as: 'skills' },
+        { model: models.Category, as: 'categories' },
+        { model: models.File, as: 'avatar' },
+      ]
+    });
 
     return res.json({
       success: true,
@@ -342,6 +378,36 @@ router.put('/publish', isFreelancer, async (req, res) => {
  */
 router.put('/skills', isFreelancer, async (req, res) => {
   const user = req.decoded;
+
+  const skillsSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+    name: Joi.string().required(),
+    categoryId: Joi.number().integer().required(),
+  }).optional();
+
+  const categoriesSchema = Joi.object().keys({
+    id: Joi.number().integer().required(),
+    name: Joi.string().required(),
+  }).optional();
+
+  // validation
+  const schema = Joi.object().keys({
+    skills: Joi.array().items(skillsSchema).required(),
+    categories: Joi.array().items(categoriesSchema).required(),
+  });
+
+  const validation = Joi.validate(req.body, schema, {
+    abortEarly: false,
+    allowUnknown: true,
+  });
+
+  if (validation.error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      data: validation.error
+    });
+  }
 
   let transaction;
 
