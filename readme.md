@@ -24,6 +24,11 @@ Run migrations on MySQL database to create all tables and database stuff:
 npx sequelize-cli db:migrate
 ```
 
+Run seeds on MySQL database to fill DB with some required data:
+```
+npx sequelize-cli db:seed:all
+```
+
 Create mappings on Elasticsearch:
 ```
 node init/es.js
