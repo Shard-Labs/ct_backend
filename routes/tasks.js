@@ -28,14 +28,14 @@ router.post('/', isClient, async (req, res) => {
   const schema = Joi.object().keys({
     title: Joi.string().required(),
     description: Joi.string().required(),
-    location: Joi.string().required(),
-    type: Joi.string().required(),
+    location: Joi.string().allow(null),
+    type: Joi.string().allow(null),
     price: Joi.number().min(1).integer().required(),
     duration: Joi.number().min(1).integer().required(),
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
     skills: Joi.array().items(skillsSchema).optional().allow(null),
   });
-
+  
   const validation = Joi.validate(req.body, schema, {
     abortEarly: false,
     allowUnknown: true,
@@ -71,7 +71,7 @@ router.post('/', isClient, async (req, res) => {
     }
 
     // fetch categories for elastic indexing
-    const categoryIds = req.body.skills.map(a => a.categoryId);
+    const categoryIds = req.body.skills ? req.body.skills.map(a => a.categoryId) : [];
     let categories = [];
 
     if (categoryIds.length) {
