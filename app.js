@@ -10,9 +10,9 @@ const app = express();
 
 // Socket.io
 const io = socket_io();
+const socketHandler = require('./lib/socketHandler.js');
 app.io = io;
 
-const index = require('./routes/index')(io);
 const authRouter = require('./routes/auth');
 const tasksRouter = require('./routes/tasks');
 const usersRouter = require('./routes/users');
@@ -23,10 +23,11 @@ const utilRouter = require('./routes/util');
 const freelancersRouter = require('./routes/freelancers');
 const clientsRouter = require('./routes/clients');
 const invitationsRouter = require('./routes/invitations');
+const notificationsRouter = require('./routes/notifications');
 
 app.use(cors());
 app.use(logger('dev'));
-app.use(express.json({limit: '5mb'}));
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -41,5 +42,29 @@ app.use('/files', jwt.checkToken, filesRouter);
 app.use('/freelancers', jwt.checkToken, freelancersRouter);
 app.use('/clients', jwt.checkToken, clientsRouter);
 app.use('/invitations', jwt.checkToken, invitationsRouter);
+app.use('/notifications', jwt.checkToken, notificationsRouter);
+
+// catch 404 and forward to error handler
+app.use((req, res, next) => {
+  const err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// no stacktraces leaked to user unless in development environment
+app.use((err, req, res) => {
+  if (app.get('env') === 'development') {
+    console.error(err);
+  }
+
+  res.status(err.status || 500);
+  return res.json({
+    success: false,
+    message: err.message,
+    data: (app.get('env') === 'development') ? err : {},
+  });
+});
+
+socketHandler(io);
 
 module.exports = app;

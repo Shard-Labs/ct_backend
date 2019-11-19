@@ -1,7 +1,7 @@
 const models = require('../models');
 const Op = models.Sequelize.Op;
-const mailer = require('../lib/mailer.js');
-const config = require('config');
+const NotificationSender = require('../lib/NotificationsSender.js');
+const _ = require('lodash');
 
 class Chat {
   constructor(io, socket) {
@@ -81,10 +81,16 @@ class Chat {
       ]
     });
 
+    // set receiver user ID
+    const receiverId = this.userId === application.client.userId
+      ? application.freelancer.userId
+      : application.client.userId;
+
     // check if user can send messages to this application
     if (application && this.userId === application.client.userId || this.userId === application.freelancer.userId) {
       const message = await models.Message.create({
         senderId: this.userId,
+        receiverId,
         applicationId,
         text,
         role
@@ -114,11 +120,6 @@ class Chat {
 
       this.io.in(applicationId).emit('messageSent', message);
 
-      // set receiver user ID
-      const receiverId = this.userId === application.client.userId
-        ? application.freelancer.userId
-        : application.client.userId;
-
       // check if receiver online
       const receiver = await models.User.findByPk(receiverId);
 
@@ -131,27 +132,30 @@ class Chat {
           role: message.role,
           createdAt: message.createdAt,
         });
-      } else {
-        // send email notification to receiver but first check if this new message is the only one
-        // if there are more unread messages then don't send notification, only on first one
-        const countUnread = await models.Message.count({
-          where: {
-            applicationId: applicationId,
-            id: {
-              [Op.ne]: message.id
-            },
-            read: false,
-          }
-        });
+      }
 
-        if (countUnread === 0) {
-          await mailer.sendMail({
-            from: config.get('email.defaultFrom'), // sender address
-            to: receiver.email, // list of receivers
-            subject: 'You have new unread message - Cryptotask', // Subject line
-            text: `You have new message for task ${application.task.title}`, // plain text body
-          });
+      // send notification to receiver but first check if this new message is the only one
+      // if there are more unread messages then don't send notification, only on first one
+      const countUnread = await models.Message.count({
+        where: {
+          applicationId: applicationId,
+          id: {
+            [Op.ne]: message.id
+          },
+          read: false,
         }
+      });
+
+      if (countUnread === 0) {
+        // check if user is already in chat (in sockets room)
+        const io = (
+          receiver.socketId
+          && _.get(this, ['io', 'sockets', 'adapter', 'rooms', applicationId, 'sockets', receiver.socketId], null)
+        ) ? null : this.io;
+        (new NotificationSender('newMessage', receiver, {
+          message,
+          application,
+        }, applicationId, io)).send();
       }
     }
   }

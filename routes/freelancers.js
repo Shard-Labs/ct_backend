@@ -77,7 +77,6 @@ router.get('/:id', async (req, res) => {
       },
       include: [
         { model: models.File, as: 'avatar' },
-        { model: models.File, as: 'resume' },
         { model: models.Skill, as: 'skills' },
         { model: models.Category, as: 'categories' },
         { model: models.Experience, as: 'workExperiences' },
@@ -243,7 +242,7 @@ router.put('/', isFreelancer, async (req, res) => {
     blog: Joi.string().optional().allow(null),
     avatar: Joi.object().keys({
       id: Joi.number().integer().required(),
-    }).optional().allow(null),
+    }).required(),
     skills: Joi.array().items(skillsSchema).optional(),
     categories: Joi.array().items(categoriesSchema).optional(),
   });

@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const models = require('../models');
 const Op = models.Sequelize.Op;
-const config = require('config');
-const storage = require('../lib/storage.js');
 
 /**
  * Get array of application which have unread messages associated
@@ -11,24 +9,38 @@ const storage = require('../lib/storage.js');
 router.get('/unread', async (req, res) => {
   const userId = req.decoded.id;
 
-  const data = await models.sequelize.query(`select A.id, T.title, M.text, M.createdAt
-      from applications A
-             right join messages M on A.id = M.applicationId
-             right join (select msg.applicationId, max(msg.createdAt) createdDate
-                         from Messages msg
-                         where msg.read = 0 and msg.senderId != :userId group by msg.applicationId) one on one.applicationId = A.id and M.createdAt = one.createdDate
-             left join Tasks T on A.taskId = T.id
-      where M.read = 0
-        and M.senderId != :userId
-        and (A.clientId = :userId or A.freelancerId = :userId)
-      group by A.id;`, {
+  // language=MySQL
+  const data = await models.sequelize.query(`WITH msgs AS (
+  SELECT m.*, ROW_NUMBER() OVER(PARTITION BY applicationId ORDER BY id DESC) AS rn
+  FROM messages AS m
+  WHERE m.read = 0
+    AND m.receiverId = :userId
+)
+SELECT m.*, t.title, a.taskId, a.clientId, a.freelancerId, c.name AS clientName, f.firstName, f.lastName
+FROM msgs AS m
+       LEFT JOIN applications AS a ON m.applicationId = a.id
+       LEFT JOIN tasks AS t ON a.taskId = t.id
+       LEFT JOIN clients AS c ON a.clientId = c.id
+       LEFT JOIN freelancers f on a.freelancerId = f.id
+WHERE m.rn = 1;`, {
     replacements: { userId: userId },
     type: models.sequelize.QueryTypes.SELECT,
   });
 
+  const messages = data.map(m => ({
+    id: m.id,
+    text: m.text,
+    task: m.title,
+    createdAt: m.createdAt,
+    applicationId: m.applicationId,
+    taskId: m.taskId,
+    senderId: m.role === 'client' ? m.clientId : m.freelancerId,
+    senderName: m.role === 'client' ? m.clientName : `${m.firstName} ${m.lastName}`,
+  }));
+
   return res.json({
     success: true,
-    data: data,
+    data: messages,
   });
 });
 

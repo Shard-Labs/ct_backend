@@ -457,6 +457,10 @@ router.get('/:taskId', async (req, res) => {
             {
               model: models.File,
               as: 'avatar',
+            },
+            {
+              model: models.Skill,
+              as: 'skills',
             }
           ]
         },
