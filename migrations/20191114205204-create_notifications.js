@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('notifications', {
+    return queryInterface.createTable('notifications', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -40,8 +40,6 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
-
-    return queryInterface.addIndex('notifications_type_reference_index', ['type', 'referenceId']);
   },
 
   down: (queryInterface, Sequelize) => {
