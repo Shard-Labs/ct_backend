@@ -160,6 +160,13 @@ router.get('/last_message/:applicationId', async (req, res) => {
     ]
   });
 
+  if(!application) {
+    return res.status(404).json({
+      success: false,
+      message: 'Something went wrong!',
+    });
+  }
+
   // check if user has access to messages
   if (userId !== application.client.userId && userId !== application.freelancer.userId) {
     return res.status(401).json({

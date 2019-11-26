@@ -17,6 +17,18 @@ router.get('/me', async (req, res) => {
 });
 
 /**
+ * Get user online status
+ */
+router.get('/online/:userId', async (req, res) => {
+  const user = await models.User.findByPk(req.params.userId);
+  return res.json({
+    success: true,
+    message: 'Success',
+    data: user.online,
+  });
+});
+
+/**
  * Update user password
  */
 router.put('/password', async (req, res) => {
