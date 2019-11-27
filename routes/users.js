@@ -21,6 +21,13 @@ router.get('/me', async (req, res) => {
  */
 router.get('/online/:userId', async (req, res) => {
   const user = await models.User.findByPk(req.params.userId);
+  if(!user){
+    return res.status(404).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
+
   return res.json({
     success: true,
     message: 'Success',
