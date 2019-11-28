@@ -179,6 +179,17 @@ router.post('/', isFreelancer, async (req, res) => {
     //associate with client
     await newApp.setClient(task.owner.id, { transaction });
 
+    // create new message with application text as message text
+    if (req.body.letter) {
+      await models.Message.create({
+        senderId: user.id,
+        receiverId: task.owner.userId,
+        role: 'freelancer',
+        applicationId: newApp.id,
+        text: req.body.letter,
+      }, { transaction });
+    }
+
     await transaction.commit();
 
     // send notification to task owner
