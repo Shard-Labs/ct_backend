@@ -38,6 +38,184 @@ router.get('/', isFreelancer, async (req, res) => {
   });
 });
 
+
+/**
+ * Get all freelancer applications with last message info
+ */
+router.get('/freelancer_messages', isFreelancer, async (req, res) => {
+  const user = req.decoded;
+
+  const applications = await models.Application.findAll({
+    where: {
+      freelancerId: user.freelancer.id,
+    },
+    include: [
+      { 
+        model: models.Client,
+        as: 'client',
+        required: false,
+        include: [
+          { model: models.File, as: 'avatar' },
+          { model: models.User, required: false }
+        ]
+      },
+    ],
+    order: [
+      ['id', 'ASC'],
+    ],
+  });
+
+  let data = [];
+  for(let i = 0; i < applications.length; ++i) {
+    let info = {
+      id: applications[i].id,
+      client: applications[i].client,
+      online: applications[i].client.User.online,
+      status: applications[i].status,
+      lastMsg: {}
+    }
+
+    const message = await models.Message.findOne({
+      where: {
+        applicationId: applications[i].id
+      },
+      include: [{
+        model: models.User,
+        as: 'sender',
+        include: [
+          {
+            model: models.Freelancer, as: 'freelancer', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
+          {
+            model: models.Client, as: 'client', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
+          { model: models.Role, as: 'roles' },
+        ]
+      }, {
+        model: models.File,
+        as: 'attachments'
+      }],
+      order: [
+        ['id', 'DESC'],
+      ]
+    });
+
+    if(message){
+      info.lastMsg = {
+        text: message.text,
+        from: user.id === message.senderId ? 'You' : message.sender[message.role].name,
+        date: message.updatedAt,
+      };
+    }
+    else {
+      info.lastMsg = {
+        text: applications[i].letter,
+        from: applications[i].client ? applications[i].client.name : applications[i].freelancer.name,
+        date: applications[i].createdAt,
+      };
+    }
+    data.push(info);
+  }
+
+  return res.json({
+    success: true,
+    data: data,
+  });
+});
+
+/**
+ * Get all applications for task and current client with last message info
+ */
+router.post('/client_messages', isClient, async (req, res) => {
+  const user = req.decoded;
+  const { ids } = req.body;
+
+  const applications = await models.Application.findAll({
+    where: {
+      id: ids
+    },
+    include: [
+      { 
+        model: models.Freelancer,
+        as: 'freelancer',
+        required: false,
+        include: [
+          { model: models.File, as: 'avatar' },
+          { model: models.User, required: false }
+        ]
+      },
+    ],
+    order: [
+      ['id', 'ASC'],
+    ],
+  });
+
+  let data = [];
+  for(let i = 0; i < applications.length; ++i) {
+    let info = {
+      id: applications[i].id,
+      freelancer: applications[i].freelancer,
+      online: applications[i].freelancer.User.online,
+      status: applications[i].status,
+      lastMsg: {}
+    };
+
+    const message = await models.Message.findOne({
+      where: {
+        applicationId: applications[i].id
+      },
+      include: [{
+        model: models.User,
+        as: 'sender',
+        include: [
+          {
+            model: models.Freelancer, as: 'freelancer', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
+          {
+            model: models.Client, as: 'client', include: [
+              { model: models.File, as: 'avatar' },
+            ]
+          },
+          { model: models.Role, as: 'roles' },
+        ]
+      }, {
+        model: models.File,
+        as: 'attachments'
+      }],
+      order: [
+        ['id', 'DESC'],
+      ]
+    });
+
+    if(message){
+      info.lastMsg = {
+        text: message.text,
+        from: user.id === message.senderId ? 'You' : message.sender[message.role].name,
+        date: message.updatedAt,
+      };
+    }
+    else {
+      info.lastMsg = {
+        text: applications[i].letter,
+        from: applications[i].client ? applications[i].client.name : applications[i].freelancer.name,
+        date: applications[i].createdAt,
+      };
+    }
+    data.push(info);
+  }
+
+  return res.json({
+    success: true,
+    data: data,
+  });
+});
+
 /**
  * Get all applications for task and current client
  */

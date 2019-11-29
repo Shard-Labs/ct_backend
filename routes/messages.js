@@ -158,4 +158,70 @@ router.get('/:applicationId', async (req, res) => {
   });
 });
 
+/**
+ * Get last message for task application
+ */
+router.get('/last_message/:applicationId', async (req, res) => {
+  const userId = req.decoded.id;
+  const applicationId = req.params.applicationId;
+
+  const application = await models.Application.findByPk(applicationId, {
+    include: [
+      { model: models.Client, as: 'client' },
+      { model: models.Freelancer, as: 'freelancer' },
+    ]
+  });
+
+  if(!application) {
+    return res.status(404).json({
+      success: false,
+      message: 'Something went wrong!',
+    });
+  }
+
+  // check if user has access to messages
+  if (userId !== application.client.userId && userId !== application.freelancer.userId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized',
+    });
+  }
+
+  const conditions = {
+    applicationId: req.params.applicationId,
+  };
+
+  const message = await models.Message.findOne({
+    where: conditions,
+    include: [{
+      model: models.User,
+      as: 'sender',
+      include: [
+        {
+          model: models.Freelancer, as: 'freelancer', include: [
+            { model: models.File, as: 'avatar' },
+          ]
+        },
+        {
+          model: models.Client, as: 'client', include: [
+            { model: models.File, as: 'avatar' },
+          ]
+        },
+        { model: models.Role, as: 'roles' },
+      ]
+    }, {
+      model: models.File,
+      as: 'attachments'
+    }],
+    order: [
+      ['id', 'DESC'],
+    ]
+  });
+
+  return res.json({
+    success: true,
+    data: message
+  });
+});
+
 module.exports = router;
