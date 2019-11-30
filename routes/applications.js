@@ -137,7 +137,7 @@ router.get('/freelancer-messages', isFreelancer, async (req, res) => {
 /**
  * Get all applications for current client with last message and task info
  */
-router.post('/client-messages', isClient, async (req, res) => {
+router.get('/client-messages', isClient, async (req, res) => {
   const user = req.decoded;
 
   const applications = await models.Application.findAll({
@@ -384,11 +384,16 @@ router.post('/', isFreelancer, async (req, res) => {
     await transaction.commit();
 
     // send notification to task owner
+    const content = `<p>Hi, you have new application for task <span style='font-weight:bold;'>${task.title}</span>`
+                    +` from <span style='font-weight:bold;'>${user.freelancer.name}</span>.</p>`
+                    +'<p>Click this link to visit our site: </p>'
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: task.owner.User.email, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
-      text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
+      /* text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body */
+      html: content,
     });
 
     return res.json({
@@ -437,6 +442,22 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
     await task.save({ transaction });
 
     await transaction.commit();
+
+    // send notification to applied freelancer
+    const freelancer = await models.Freelancer.findByPk(application.freelancerId, {
+      include: [
+        { model: models.User, attributes: ['email'] }
+      ]
+    });
+    const content = `<p>Hi, you have been hired for task <span style='font-weight:bold;'>${task.title}</span>.</p>`
+                    +'<p>Click this link to visit our site: </p>'
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a>`;
+    mailer.sendMail({
+      from: config.get('email.defaultFrom'), // sender address
+      to: freelancer.User.email, // list of receivers
+      subject: 'Application accepted - Cryptotask', // Subject line
+      html: content,
+    });
 
     return res.json({
       success: true,
