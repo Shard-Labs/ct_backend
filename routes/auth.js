@@ -90,11 +90,14 @@ router.post('/register', async (req, res) => {
     }
 
     // send email confirmation message
+    const content = '<h5>Thanks for joining CryptoTask family, click this link to confirm your account:</h5>'
+                  +`<a href='${config.get('frontendUrl')}/confirm-email/${confirmationHash}'>Confirm account!</a>`;
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: req.body.email, // list of receivers
       subject: 'Email confirmation - Cryptotask', // Subject line
-      text: `${config.get('frontendUrl')}/confirm-email/${confirmationHash}`, // plain text body
+      /* text: `${config.get('frontendUrl')}/confirm-email/${confirmationHash}`, // plain text body */
+      html: content // html body
     });
 
     await transaction.commit();

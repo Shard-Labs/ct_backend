@@ -40,9 +40,9 @@ router.get('/', isFreelancer, async (req, res) => {
 
 
 /**
- * Get all freelancer applications with last message info
+ * Get all freelancer applications with last message and task info
  */
-router.get('/freelancer_messages', isFreelancer, async (req, res) => {
+router.get('/freelancer-messages', isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   const applications = await models.Application.findAll({
@@ -59,6 +59,11 @@ router.get('/freelancer_messages', isFreelancer, async (req, res) => {
           { model: models.User, required: false }
         ]
       },
+      {
+        model: models.Task,
+        as: 'task',
+        required: false
+      }
     ],
     order: [
       ['id', 'ASC'],
@@ -69,6 +74,8 @@ router.get('/freelancer_messages', isFreelancer, async (req, res) => {
   for(let i = 0; i < applications.length; ++i) {
     let info = {
       id: applications[i].id,
+      taskId: applications[i].task.id,
+      taskTitle: applications[i].task.title,
       client: applications[i].client,
       online: applications[i].client.User.online,
       status: applications[i].status,
@@ -128,15 +135,14 @@ router.get('/freelancer_messages', isFreelancer, async (req, res) => {
 });
 
 /**
- * Get all applications for task and current client with last message info
+ * Get all applications for current client with last message and task info
  */
-router.post('/client_messages', isClient, async (req, res) => {
+router.post('/client-messages', isClient, async (req, res) => {
   const user = req.decoded;
-  const { ids } = req.body;
 
   const applications = await models.Application.findAll({
     where: {
-      id: ids
+      clientId: user.client.id
     },
     include: [
       { 
@@ -148,6 +154,11 @@ router.post('/client_messages', isClient, async (req, res) => {
           { model: models.User, required: false }
         ]
       },
+      {
+        model: models.Task,
+        as: 'task',
+        required: false
+      }
     ],
     order: [
       ['id', 'ASC'],
@@ -158,6 +169,8 @@ router.post('/client_messages', isClient, async (req, res) => {
   for(let i = 0; i < applications.length; ++i) {
     let info = {
       id: applications[i].id,
+      taskId: applications[i].task.id,
+      taskTitle: applications[i].task.title,
       freelancer: applications[i].freelancer,
       online: applications[i].freelancer.User.online,
       status: applications[i].status,
