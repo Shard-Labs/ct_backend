@@ -61,6 +61,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    linkedin: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
+    web: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
+    blog: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
   }, {
     tableName: 'freelancers',
   });

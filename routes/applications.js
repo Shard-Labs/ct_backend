@@ -40,9 +40,9 @@ router.get('/', isFreelancer, async (req, res) => {
 
 
 /**
- * Get all freelancer applications with last message info
+ * Get all freelancer applications with last message and task info
  */
-router.get('/freelancer_messages', isFreelancer, async (req, res) => {
+router.get('/freelancer-messages', isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   const applications = await models.Application.findAll({
@@ -59,6 +59,11 @@ router.get('/freelancer_messages', isFreelancer, async (req, res) => {
           { model: models.User, required: false }
         ]
       },
+      {
+        model: models.Task,
+        as: 'task',
+        required: false
+      }
     ],
     order: [
       ['id', 'ASC'],
@@ -69,6 +74,8 @@ router.get('/freelancer_messages', isFreelancer, async (req, res) => {
   for(let i = 0; i < applications.length; ++i) {
     let info = {
       id: applications[i].id,
+      taskId: applications[i].task.id,
+      taskTitle: applications[i].task.title,
       client: applications[i].client,
       online: applications[i].client.User.online,
       status: applications[i].status,
@@ -128,15 +135,14 @@ router.get('/freelancer_messages', isFreelancer, async (req, res) => {
 });
 
 /**
- * Get all applications for task and current client with last message info
+ * Get all applications for current client with last message and task info
  */
-router.post('/client_messages', isClient, async (req, res) => {
+router.get('/client-messages', isClient, async (req, res) => {
   const user = req.decoded;
-  const { ids } = req.body;
 
   const applications = await models.Application.findAll({
     where: {
-      id: ids
+      clientId: user.client.id
     },
     include: [
       { 
@@ -148,6 +154,11 @@ router.post('/client_messages', isClient, async (req, res) => {
           { model: models.User, required: false }
         ]
       },
+      {
+        model: models.Task,
+        as: 'task',
+        required: false
+      }
     ],
     order: [
       ['id', 'ASC'],
@@ -158,6 +169,8 @@ router.post('/client_messages', isClient, async (req, res) => {
   for(let i = 0; i < applications.length; ++i) {
     let info = {
       id: applications[i].id,
+      taskId: applications[i].task.id,
+      taskTitle: applications[i].task.title,
       freelancer: applications[i].freelancer,
       online: applications[i].freelancer.User.online,
       status: applications[i].status,
@@ -371,11 +384,16 @@ router.post('/', isFreelancer, async (req, res) => {
     await transaction.commit();
 
     // send notification to task owner
+    const content = `<p>Hi, you have new application for task <span style='font-weight:bold;'>${task.title}</span>`
+                    +` from <span style='font-weight:bold;'>${user.freelancer.name}</span>.</p>`
+                    +'<p>Click this link to visit our site: </p>'
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: task.owner.User.email, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
-      text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
+      /* text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body */
+      html: content,
     });
 
     return res.json({
@@ -424,6 +442,22 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
     await task.save({ transaction });
 
     await transaction.commit();
+
+    // send notification to applied freelancer
+    const freelancer = await models.Freelancer.findByPk(application.freelancerId, {
+      include: [
+        { model: models.User, attributes: ['email'] }
+      ]
+    });
+    const content = `<p>Hi, you have been hired for task <span style='font-weight:bold;'>${task.title}</span>.</p>`
+                    +'<p>Click this link to visit our site: </p>'
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a>`;
+    mailer.sendMail({
+      from: config.get('email.defaultFrom'), // sender address
+      to: freelancer.User.email, // list of receivers
+      subject: 'Application accepted - Cryptotask', // Subject line
+      html: content,
+    });
 
     return res.json({
       success: true,
