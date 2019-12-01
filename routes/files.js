@@ -12,6 +12,9 @@ const buckets = {
 };
 
 const upload = multer({
+  limits: {
+    fileSize: 10485760, // 10MB
+  },
   storage: multerS3({
     s3: storage,
     bucket: (req, file, cb) => {
