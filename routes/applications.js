@@ -38,25 +38,27 @@ router.get('/', isFreelancer, async (req, res) => {
   });
 });
 
-
 /**
- * Get all freelancer applications with last message and task info
+ * Get all applications for current user with last message and task info
  */
-router.get('/freelancer-messages', isFreelancer, async (req, res) => {
+router.get('/messages-info', async (req, res) => {
   const user = req.decoded;
+  const role = user.roles[0].name;
+  const oppositeRole = role === 'client' ? 'freelancer' : 'client';
+
+  const conditions = {};
+  conditions[`${role}Id`] = user[role].id;
 
   const applications = await models.Application.findAll({
-    where: {
-      freelancerId: user.freelancer.id,
-    },
+    where: conditions,
     include: [
-      { 
-        model: models.Client,
-        as: 'client',
+      includeRole = { 
+        model: models[oppositeRole.charAt(0).toUpperCase() + oppositeRole.substring(1)],
+        as: oppositeRole,
         required: false,
         include: [
           { model: models.File, as: 'avatar' },
-          { model: models.User, required: false }
+          { model: models.User, required: true }
         ]
       },
       {
@@ -76,103 +78,8 @@ router.get('/freelancer-messages', isFreelancer, async (req, res) => {
       id: applications[i].id,
       taskId: applications[i].task.id,
       taskTitle: applications[i].task.title,
-      client: applications[i].client,
-      online: applications[i].client.User.online,
-      status: applications[i].status,
-      lastMsg: {}
-    }
-
-    const message = await models.Message.findOne({
-      where: {
-        applicationId: applications[i].id
-      },
-      include: [{
-        model: models.User,
-        as: 'sender',
-        include: [
-          {
-            model: models.Freelancer, as: 'freelancer', include: [
-              { model: models.File, as: 'avatar' },
-            ]
-          },
-          {
-            model: models.Client, as: 'client', include: [
-              { model: models.File, as: 'avatar' },
-            ]
-          },
-          { model: models.Role, as: 'roles' },
-        ]
-      }, {
-        model: models.File,
-        as: 'attachments'
-      }],
-      order: [
-        ['id', 'DESC'],
-      ]
-    });
-
-    if(message){
-      info.lastMsg = {
-        text: message.text,
-        from: user.id === message.senderId ? 'You' : message.sender[message.role].name,
-        date: message.updatedAt,
-      };
-    }
-    else {
-      info.lastMsg = {
-        text: applications[i].letter,
-        from: applications[i].client ? applications[i].client.name : applications[i].freelancer.name,
-        date: applications[i].createdAt,
-      };
-    }
-    data.push(info);
-  }
-
-  return res.json({
-    success: true,
-    data: data,
-  });
-});
-
-/**
- * Get all applications for current client with last message and task info
- */
-router.get('/client-messages', isClient, async (req, res) => {
-  const user = req.decoded;
-
-  const applications = await models.Application.findAll({
-    where: {
-      clientId: user.client.id
-    },
-    include: [
-      { 
-        model: models.Freelancer,
-        as: 'freelancer',
-        required: false,
-        include: [
-          { model: models.File, as: 'avatar' },
-          { model: models.User, required: false }
-        ]
-      },
-      {
-        model: models.Task,
-        as: 'task',
-        required: false
-      }
-    ],
-    order: [
-      ['id', 'ASC'],
-    ],
-  });
-
-  let data = [];
-  for(let i = 0; i < applications.length; ++i) {
-    let info = {
-      id: applications[i].id,
-      taskId: applications[i].task.id,
-      taskTitle: applications[i].task.title,
-      freelancer: applications[i].freelancer,
-      online: applications[i].freelancer.User.online,
+      role: applications[i][oppositeRole],
+      online: applications[i][oppositeRole].User.online,
       status: applications[i].status,
       lastMsg: {}
     };
@@ -185,17 +92,8 @@ router.get('/client-messages', isClient, async (req, res) => {
         model: models.User,
         as: 'sender',
         include: [
-          {
-            model: models.Freelancer, as: 'freelancer', include: [
-              { model: models.File, as: 'avatar' },
-            ]
-          },
-          {
-            model: models.Client, as: 'client', include: [
-              { model: models.File, as: 'avatar' },
-            ]
-          },
-          { model: models.Role, as: 'roles' },
+          { model: models.Freelancer, as: 'freelancer' },
+          { model: models.Client, as: 'client' },
         ]
       }, {
         model: models.File,
