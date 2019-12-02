@@ -8,11 +8,13 @@ const _ = require('lodash');
 const isClient = require('../middleware/isClient.js');
 const Op = models.Sequelize.Op;
 const constants = require('../lib/constants.js');
+const jwt = require('../middleware/jwt');
+const userMiddleware = require('../middleware/userMiddleware.js');
 
 /**
  * Create new task
  */
-router.post('/', isClient, async (req, res) => {
+router.post('/', jwt.checkToken, isClient, async (req, res) => {
   const user = req.decoded;
 
   // validation
@@ -35,7 +37,7 @@ router.post('/', isClient, async (req, res) => {
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
     skills: Joi.array().items(skillsSchema).optional().allow(null),
   });
-  
+
   const validation = Joi.validate(req.body, schema, {
     abortEarly: false,
     allowUnknown: true,
@@ -128,7 +130,7 @@ router.post('/', isClient, async (req, res) => {
 /**
  * Edit task
  */
-router.put('/:taskId', isClient, async (req, res) => {
+router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
   const user = req.decoded;
   const task = await models.Task.findByPk(req.params.taskId);
 
@@ -273,7 +275,7 @@ router.put('/:taskId', isClient, async (req, res) => {
  * Delete task
  * TODO delete attachments on s3 when deleting file
  */
-router.delete('/:taskId', isClient, async (req, res) => {
+router.delete('/:taskId', jwt.checkToken, isClient, async (req, res) => {
   const user = req.decoded;
 
   const task = await models.Task.findByPk(req.params.taskId);
@@ -322,7 +324,7 @@ router.delete('/:taskId', isClient, async (req, res) => {
 /**
  * Search tasks against elastic search server
  */
-router.get('/search', async (req, res) => {
+router.get('/search', userMiddleware.getUser, async (req, res) => {
   const q = req.query.q;
   const page = req.query.page || 1;
   const perPage = req.query.perPage || 20;
@@ -373,7 +375,7 @@ router.get('/search', async (req, res) => {
 /**
  * Get tasks that client created
  */
-router.get('/my', isClient, async (req, res) => {
+router.get('/my', jwt.checkToken, isClient, async (req, res) => {
   const user = req.decoded;
   const orderBy = req.query.order;
   const searchTerm = req.query.term;
@@ -411,7 +413,7 @@ router.get('/my', isClient, async (req, res) => {
 /**
  * Get single task
  */
-router.get('/:taskId', async (req, res) => {
+router.get('/:taskId', userMiddleware.getUser, async (req, res) => {
   const taskId = req.params.taskId;
   const user = req.decoded;
 
@@ -432,40 +434,42 @@ router.get('/:taskId', async (req, res) => {
     as: 'skills',
   }];
 
-  if (user.freelancer) {
-    include.push({
-      model: models.Application,
-      as: 'applications',
-      where: {
-        freelancerId: user.freelancer.id
-      },
-      required: false,
-    });
-  } else if (user.client) {
-    include.push({
-      model: models.Application,
-      as: 'applications',
-      where: {
-        clientId: user.client.id
-      },
-      required: false,
-      include: [
-        {
-          model: models.Freelancer,
-          as: 'freelancer',
-          include: [
-            {
-              model: models.File,
-              as: 'avatar',
-            },
-            {
-              model: models.Skill,
-              as: 'skills',
-            }
-          ]
+  if (user) {
+    if (user.freelancer) {
+      include.push({
+        model: models.Application,
+        as: 'applications',
+        where: {
+          freelancerId: user.freelancer.id
         },
-      ]
-    });
+        required: false,
+      });
+    } else if (user.client) {
+      include.push({
+        model: models.Application,
+        as: 'applications',
+        where: {
+          clientId: user.client.id
+        },
+        required: false,
+        include: [
+          {
+            model: models.Freelancer,
+            as: 'freelancer',
+            include: [
+              {
+                model: models.File,
+                as: 'avatar',
+              },
+              {
+                model: models.Skill,
+                as: 'skills',
+              }
+            ]
+          },
+        ]
+      });
+    }
   }
 
   const task = await models.Task.findByPk(taskId, {

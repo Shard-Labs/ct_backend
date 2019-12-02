@@ -7,11 +7,13 @@ const isFreelancer = require('../middleware/isFreelancer.js');
 const asyncForEach = require('../lib/asyncForEach.js');
 const es = require('../lib/es');
 const config = require('config');
+const jwt = require('../middleware/jwt');
+const userMiddleware = require('../middleware/userMiddleware.js');
 
 /**
  * Search freelancers
  */
-router.get('/', async (req, res) => {
+router.get('/', userMiddleware.getUser, async (req, res) => {
   const q = req.query.q;
   const page = req.query.page || 1;
   const perPage = req.query.perPage || 20;
@@ -66,7 +68,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+/**
+ * Get single freelancer
+ */
+router.get('/:id', userMiddleware.getUser, async (req, res) => {
   const id = req.params.id;
 
   try {
@@ -113,7 +118,7 @@ router.get('/:id', async (req, res) => {
 /**
  * Create new freelancer user
  */
-router.post('/', async (req, res) => {
+router.post('/', jwt.checkToken, async (req, res) => {
   const userId = req.decoded.id;
 
   // validation
@@ -215,7 +220,7 @@ router.post('/', async (req, res) => {
 /**
  * Update freelancer basic profile
  */
-router.put('/', isFreelancer, async (req, res) => {
+router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   const skillsSchema = Joi.object().keys({
@@ -336,7 +341,7 @@ router.put('/', isFreelancer, async (req, res) => {
 /**
  * Publish freelancer profile
  */
-router.put('/publish', isFreelancer, async (req, res) => {
+router.put('/publish', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   try {
@@ -375,7 +380,7 @@ router.put('/publish', isFreelancer, async (req, res) => {
 /**
  * Update freelancer categories and skills
  */
-router.put('/skills', isFreelancer, async (req, res) => {
+router.put('/skills', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   const skillsSchema = Joi.object().keys({
@@ -456,7 +461,7 @@ router.put('/skills', isFreelancer, async (req, res) => {
 /**
  * Update freelancer resume
  */
-router.put('/resume', isFreelancer, async (req, res) => {
+router.put('/resume', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   try {
@@ -495,7 +500,7 @@ router.put('/resume', isFreelancer, async (req, res) => {
 /**
  * Update freelancer resume
  */
-router.delete('/resume', isFreelancer, async (req, res) => {
+router.delete('/resume', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   try {
@@ -520,7 +525,7 @@ router.delete('/resume', isFreelancer, async (req, res) => {
 /**
  * Update freelancer experiences
  */
-router.put('/experience', isFreelancer, async (req, res) => {
+router.put('/experience', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   const experienceSchema = Joi.object().keys({
@@ -598,7 +603,7 @@ router.put('/experience', isFreelancer, async (req, res) => {
 /**
  * Add freelancer projects
  */
-router.put('/projects', isFreelancer, async (req, res) => {
+router.put('/projects', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
 
   // validation
