@@ -108,7 +108,7 @@ router.post('/', isClient, async (req, res) => {
       where: {
         taskId: taskId,
         freelancerId,
-      }
+      },
     }, { transaction });
 
     // if invitation already created
@@ -130,11 +130,22 @@ router.post('/', isClient, async (req, res) => {
     }, { transaction });
 
     // send notification to freelancer
+    const freelancer = await models.Freelancer.findByPk(freelancerId,{
+      include: [
+        { model: models.User, attributes: ['email'] }
+      ]
+    })
+    const content = `<html><body><p>Hi, you have new invitation for task <span style='font-weight:bold;'>${task.title}</span>`
+                    +` from <span style='font-weight:bold;'>${task.owner.name}</span>.</p>`
+                    +'<p>Click this link to visit our site: </p>'
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: task.owner.User.email, // list of receivers
+      // to: task.owner.User.email, list of receivers
+      to: `<${freelancer.User.email}>`, // list of receivers
       subject: 'New task invitation - Cryptotask', // Subject line
       text: `Hi, you have new invitation for task ${task.title} from ${task.owner.name}`, // plain text body
+      html: content
     });
 
     await transaction.commit();
