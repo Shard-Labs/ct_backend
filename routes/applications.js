@@ -123,7 +123,10 @@ router.get('/messages-info', async (req, res) => {
 
   return res.json({
     success: true,
-    data: data,
+    data: {
+      role: role,
+      data: data,
+    },
   });
 });
 
