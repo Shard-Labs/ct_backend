@@ -123,7 +123,10 @@ router.get('/messages-info', async (req, res) => {
 
   return res.json({
     success: true,
-    data: data,
+    data: {
+      role: role,
+      data: data,
+    },
   });
 });
 
@@ -282,15 +285,15 @@ router.post('/', isFreelancer, async (req, res) => {
     await transaction.commit();
 
     // send notification to task owner
-    const content = `<p>Hi, you have new application for task <span style='font-weight:bold;'>${task.title}</span>`
+    const content = `<html><body><p>Hi, you have new application for task <span style='font-weight:bold;'>${task.title}</span>`
                     +` from <span style='font-weight:bold;'>${user.freelancer.name}</span>.</p>`
                     +'<p>Click this link to visit our site: </p>'
-                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a>`;
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: task.owner.User.email, // list of receivers
+      to: `<${task.owner.User.email}>`, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
-      /* text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body */
+      text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
       html: content,
     });
 
@@ -347,13 +350,14 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
         { model: models.User, attributes: ['email'] }
       ]
     });
-    const content = `<p>Hi, you have been hired for task <span style='font-weight:bold;'>${task.title}</span>.</p>`
+    const content = `<html><body><p>Hi, you have been hired for task <span style='font-weight:bold;'>${task.title}</span>.</p>`
                     +'<p>Click this link to visit our site: </p>'
-                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a>`;
+                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: freelancer.User.email, // list of receivers
+      to: `<${freelancer.User.email}>`, // list of receivers
       subject: 'Application accepted - Cryptotask', // Subject line
+      text: `Hi, you have been hired for task ${task.title}`, // Plain text body
       html: content,
     });
 

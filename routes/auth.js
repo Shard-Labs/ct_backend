@@ -90,13 +90,13 @@ router.post('/register', async (req, res) => {
     }
 
     // send email confirmation message
-    const content = '<h5>Thanks for joining CryptoTask family, click this link to confirm your account:</h5>'
-                  +`<a href='${config.get('frontendUrl')}/confirm-email/${confirmationHash}'>Confirm account!</a>`;
+    const content = '<html><body><h5>Thanks for joining CryptoTask family, click this link to confirm your account:</h5>'
+                  +`<a href='${config.get('frontendUrl')}/confirm-email/${confirmationHash}'>Confirm account!</a></body></html>`;
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: req.body.email, // list of receivers
+      to: `<${req.body.email}>`, // list of receivers
       subject: 'Email confirmation - Cryptotask', // Subject line
-      /* text: `${config.get('frontendUrl')}/confirm-email/${confirmationHash}`, // plain text body */
+      text: `${config.get('frontendUrl')}/confirm-email/${confirmationHash}`, // plain text body
       html: content // html body
     });
 
@@ -286,11 +286,14 @@ router.post('/forgot-password', async (req, res) => {
   }
 
   // send email confirmation message
+  const content = '<html><body><h5>Click this link to reset your password:</h5>'
+                  +`<a href='${config.get('frontendUrl')}/reset-password/${resetToken}'>Reset password!</a></body></html>`;
   await mailer.sendMail({
     from: config.get('email.defaultFrom'), // sender address
-    to: req.body.email, // list of receivers
+    to: `<${req.body.email}>`, // list of receivers
     subject: 'Password reset - Cryptotask', // Subject line
     text: `${config.get('frontendUrl')}/reset-password/${resetToken}`, // plain text body
+    html: content // html body
   });
 
   return res.json({
