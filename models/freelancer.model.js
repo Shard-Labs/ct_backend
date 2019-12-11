@@ -83,6 +83,7 @@ module.exports = (sequelize, DataTypes) => {
   Freelancer.associate = models => {
     Freelancer.belongsTo(models.User, {
       foreignKey: 'userId',
+      as: 'user'
     });
 
     Freelancer.belongsTo(models.File, {

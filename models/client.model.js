@@ -36,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
   Client.associate = models => {
     Client.belongsTo(models.User, {
       foreignKey: 'userId',
+      as: 'user'
     });
 
     Client.belongsTo(models.File, {

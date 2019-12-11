@@ -19,6 +19,7 @@ class Chat {
     user.online = true;
     user.socketId = this.socket.id;
     await user.save();
+    this.io.emit('userOnline', user);
   }
 
   /**
@@ -30,6 +31,7 @@ class Chat {
     user.online = false;
     user.socketId = null;
     await user.save();
+    this.io.emit('userOffline', user);
   }
 
   /**
@@ -88,74 +90,84 @@ class Chat {
 
     // check if user can send messages to this application
     if (application && this.userId === application.client.userId || this.userId === application.freelancer.userId) {
-      const message = await models.Message.create({
-        senderId: this.userId,
-        receiverId,
-        applicationId,
-        text,
-        role
-      });
+      let transaction;
 
-      message.setDataValue('sender', await message.getSender({
-        include: [
-          {
-            model: models.Freelancer, as: 'freelancer', include: [
-              { model: models.File, as: 'avatar' },
-            ]
-          },
-          {
-            model: models.Client, as: 'client', include: [
-              { model: models.File, as: 'avatar' },
-            ]
-          },
-          { model: models.Role, as: 'roles' },
-        ]
-      }));
+      try {
+        transaction = await models.sequelize.transaction();
 
-      if (attachmentIds && attachmentIds.length) {
-        await message.setAttachments(attachmentIds);
-      }
+        const message = await models.Message.create({
+          senderId: this.userId,
+          receiverId,
+          applicationId,
+          text,
+          role
+        }, { transaction });
 
-      message.setDataValue('attachments', await message.getAttachments());
+        // update last message ID on application
+        application.lastMessageId = message.id;
+        application.save({ transaction });
 
-      this.io.in(applicationId).emit('messageSent', message);
+        message.setDataValue('sender', await message.getSender({
+          include: [
+            {
+              model: models.Freelancer, as: 'freelancer', include: [
+                { model: models.File, as: 'avatar' },
+              ]
+            },
+            {
+              model: models.Client, as: 'client', include: [
+                { model: models.File, as: 'avatar' },
+              ]
+            },
+            { model: models.Role, as: 'roles' },
+          ]
+        }));
 
-      // check if receiver online
-      const receiver = await models.User.findByPk(receiverId);
-
-      if (receiver.online && receiver.socketId) {
-        // update unread messages for receiver
-        this.io.to(`${receiver.socketId}`).emit('messageReceived', {
-          id: application.id,
-          title: application.task.title,
-          text: message.text,
-          role: message.role,
-          createdAt: message.createdAt,
-        });
-      }
-
-      // send notification to receiver but first check if this new message is the only one
-      // if there are more unread messages then don't send notification, only on first one
-      const countUnread = await models.Message.count({
-        where: {
-          applicationId: applicationId,
-          id: {
-            [Op.ne]: message.id
-          },
-          read: false,
+        if (attachmentIds && attachmentIds.length) {
+          await message.setAttachments(attachmentIds);
         }
-      });
 
-      if (countUnread === 0) {
-        // check if user is already in chat (in sockets room)
-        const io = (
-          receiver.socketId
-          && _.get(this, ['io', 'sockets', 'adapter', 'rooms', applicationId, 'sockets', receiver.socketId], null)
-        ) ? null : this.io;
-        (new NotificationSender('newMessage', receiver, {
-          message,
-          application,
-        }, applicationId, io)).send();
+        message.setDataValue('attachments', await message.getAttachments());
+
+        this.io.in(applicationId).emit('messageSent', message);
+
+        // check if receiver online
+        const receiver = await models.User.findByPk(receiverId);
+
+        if (receiver.online && receiver.socketId) {
+          // update unread messages for receiver
+          this.io.to(`${receiver.socketId}`).emit('messageReceived', message);
+        }
+
+        // send notification to receiver but first check if this new message is the only one
+        // if there are more unread messages then don't send notification, only on first one
+        const countUnread = await models.Message.count({
+          where: {
+            applicationId: applicationId,
+            id: {
+              [Op.ne]: message.id
+            },
+            read: false,
+          }
+        });
+
+        if (countUnread === 0) {
+          // check if user is already in chat (in sockets room)
+          const io = (
+            receiver.socketId
+            && _.get(this, ['io', 'sockets', 'adapter', 'rooms', applicationId, 'sockets', receiver.socketId], null)
+          ) ? null : this.io;
+          (new NotificationSender('newMessage', receiver, {
+            message,
+            application,
+          }, applicationId, io)).send();
+        }
+
+        await transaction.commit();
+      } catch (err) {
+        if (transaction) await transaction.rollback();
+
+        console.error('Unable to send message! ' + err.message);
       }
     }
   }

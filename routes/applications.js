@@ -52,7 +52,7 @@ router.get('/messages-info', async (req, res) => {
   const applications = await models.Application.findAll({
     where: conditions,
     include: [
-      includeRole = { 
+      includeRole = {
         model: models[oppositeRole.charAt(0).toUpperCase() + oppositeRole.substring(1)],
         as: oppositeRole,
         required: false,
@@ -172,6 +172,7 @@ router.get('/:applicationId', async (req, res) => {
         ]
       },
       { model: models.Client, as: 'client', required: false, },
+      { model: models.Freelancer, as: 'freelancer', required: false, },
     ]
   });
 

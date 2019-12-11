@@ -4,6 +4,68 @@ const models = require('../models');
 const Op = models.Sequelize.Op;
 
 /**
+ * Get all message threads for current user
+ */
+router.get('/threads', async (req, res) => {
+  const user = req.decoded;
+  const userConditions = [];
+
+  if (user.freelancer) {
+    userConditions.push({
+      freelancerId: user.freelancer.id,
+    });
+  }
+
+  if (user.client) {
+    userConditions.push({
+      clientId: user.client.id,
+    });
+  }
+
+  const data = await models.Application.findAll({
+    where: {
+      [Op.or]: userConditions
+    },
+    include: [
+      {
+        model: models.Freelancer, as: 'freelancer', include: [
+          { model: models.File, as: 'avatar' },
+          { model: models.User, as: 'user' },
+        ]
+      },
+      {
+        model: models.Client, as: 'client', include: [
+          { model: models.File, as: 'avatar' },
+          { model: models.User, as: 'user' },
+        ]
+      },
+      {
+        model: models.Task,
+        as: 'task',
+        attributes: ['title']
+      },
+      {
+        model: models.Message,
+        as: 'lastMessage',
+        include: [{
+          model: models.User,
+          as: 'sender',
+          include: [
+            { model: models.Freelancer, as: 'freelancer' },
+            { model: models.Client, as: 'client' },
+          ]
+        }],
+      }
+    ]
+  });
+
+  return res.json({
+    success: true,
+    data,
+  });
+});
+
+/**
  * Get array of application which have unread messages associated
  */
 router.get('/unread', async (req, res) => {
@@ -155,72 +217,6 @@ router.get('/:applicationId', async (req, res) => {
   return res.json({
     success: true,
     data: { messages, total }
-  });
-});
-
-/**
- * Get last message for task application
- */
-router.get('/last_message/:applicationId', async (req, res) => {
-  const userId = req.decoded.id;
-  const applicationId = req.params.applicationId;
-
-  const application = await models.Application.findByPk(applicationId, {
-    include: [
-      { model: models.Client, as: 'client' },
-      { model: models.Freelancer, as: 'freelancer' },
-    ]
-  });
-
-  if(!application) {
-    return res.status(404).json({
-      success: false,
-      message: 'Something went wrong!',
-    });
-  }
-
-  // check if user has access to messages
-  if (userId !== application.client.userId && userId !== application.freelancer.userId) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized',
-    });
-  }
-
-  const conditions = {
-    applicationId: req.params.applicationId,
-  };
-
-  const message = await models.Message.findOne({
-    where: conditions,
-    include: [{
-      model: models.User,
-      as: 'sender',
-      include: [
-        {
-          model: models.Freelancer, as: 'freelancer', include: [
-            { model: models.File, as: 'avatar' },
-          ]
-        },
-        {
-          model: models.Client, as: 'client', include: [
-            { model: models.File, as: 'avatar' },
-          ]
-        },
-        { model: models.Role, as: 'roles' },
-      ]
-    }, {
-      model: models.File,
-      as: 'attachments'
-    }],
-    order: [
-      ['id', 'DESC'],
-    ]
-  });
-
-  return res.json({
-    success: true,
-    data: message
   });
 });
 

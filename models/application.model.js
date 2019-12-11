@@ -32,6 +32,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0,
     },
+    lastMessageId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   }, {
     tableName: 'applications',
   });
@@ -58,6 +62,11 @@ module.exports = (sequelize, DataTypes) => {
     Application.belongsTo(models.Freelancer, {
       foreignKey: 'freelancerId',
       as: 'freelancer',
+    });
+
+    Application.belongsTo(models.Message, {
+      foreignKey: 'lastMessageId',
+      as: 'lastMessage',
     });
   };
 
