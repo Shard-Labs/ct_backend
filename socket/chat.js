@@ -124,7 +124,7 @@ class Chat {
         }));
 
         if (attachmentIds && attachmentIds.length) {
-          await message.setAttachments(attachmentIds);
+          await message.setAttachments(attachmentIds, { transaction });
         }
 
         message.setDataValue('attachments', await message.getAttachments());
