@@ -120,14 +120,15 @@ class Chat {
               ]
             },
             { model: models.Role, as: 'roles' },
-          ]
+          ],
+          transaction
         }));
 
         if (attachmentIds && attachmentIds.length) {
           await message.setAttachments(attachmentIds, { transaction });
         }
 
-        message.setDataValue('attachments', await message.getAttachments());
+        message.setDataValue('attachments', await message.getAttachments({ transaction }));
 
         this.io.in(applicationId).emit('messageSent', message);
 
