@@ -39,98 +39,6 @@ router.get('/', isFreelancer, async (req, res) => {
 });
 
 /**
- * Get all applications for current user with last message and task info
- */
-router.get('/messages-info', async (req, res) => {
-  const user = req.decoded;
-  const role = user.roles[0].name;
-  const oppositeRole = role === 'client' ? 'freelancer' : 'client';
-
-  const conditions = {};
-  conditions[`${role}Id`] = user[role].id;
-
-  const applications = await models.Application.findAll({
-    where: conditions,
-    include: [
-      includeRole = {
-        model: models[oppositeRole.charAt(0).toUpperCase() + oppositeRole.substring(1)],
-        as: oppositeRole,
-        required: false,
-        include: [
-          { model: models.File, as: 'avatar' },
-          { model: models.User, required: true }
-        ]
-      },
-      {
-        model: models.Task,
-        as: 'task',
-        required: false
-      }
-    ],
-    order: [
-      ['id', 'ASC'],
-    ],
-  });
-
-  let data = [];
-  for(let i = 0; i < applications.length; ++i) {
-    let info = {
-      id: applications[i].id,
-      taskId: applications[i].task.id,
-      taskTitle: applications[i].task.title,
-      role: applications[i][oppositeRole],
-      online: applications[i][oppositeRole].User.online,
-      status: applications[i].status,
-      lastMsg: {}
-    };
-
-    const message = await models.Message.findOne({
-      where: {
-        applicationId: applications[i].id
-      },
-      include: [{
-        model: models.User,
-        as: 'sender',
-        include: [
-          { model: models.Freelancer, as: 'freelancer' },
-          { model: models.Client, as: 'client' },
-        ]
-      }, {
-        model: models.File,
-        as: 'attachments'
-      }],
-      order: [
-        ['id', 'DESC'],
-      ]
-    });
-
-    if(message){
-      info.lastMsg = {
-        text: message.text,
-        from: user.id === message.senderId ? 'You' : message.sender[message.role].name,
-        date: message.updatedAt,
-      };
-    }
-    else {
-      info.lastMsg = {
-        text: applications[i].letter,
-        from: applications[i].client ? applications[i].client.name : applications[i].freelancer.name,
-        date: applications[i].createdAt,
-      };
-    }
-    data.push(info);
-  }
-
-  return res.json({
-    success: true,
-    data: {
-      role: role,
-      data: data,
-    },
-  });
-});
-
-/**
  * Get all applications for task and current client
  */
 router.get('/task/:taskId', isClient, async (req, res) => {
@@ -224,7 +132,7 @@ router.post('/', isFreelancer, async (req, res) => {
         as: 'owner',
         attributes: ['id', 'userId'],
         include: [
-          { model: models.User, attributes: ['id', 'email'] }
+          { model: models.User, as: 'user', attributes: ['id', 'email'] }
         ]
       }],
       transaction
@@ -292,7 +200,7 @@ router.post('/', isFreelancer, async (req, res) => {
                     +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: `<${task.owner.User.email}>`, // list of receivers
+      to: `<${task.owner.user.email}>`, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
       text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
       html: content,
@@ -348,7 +256,7 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
     // send notification to applied freelancer
     const freelancer = await models.Freelancer.findByPk(application.freelancerId, {
       include: [
-        { model: models.User, attributes: ['email'] }
+        { model: models.User, as: 'user', attributes: ['email'] }
       ]
     });
     const content = `<html><body><p>Hi, you have been hired for task <span style='font-weight:bold;'>${task.title}</span>.</p>`
@@ -356,7 +264,7 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
                     +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
-      to: `<${freelancer.User.email}>`, // list of receivers
+      to: `<${freelancer.user.email}>`, // list of receivers
       subject: 'Application accepted - Cryptotask', // Subject line
       text: `Hi, you have been hired for task ${task.title}`, // Plain text body
       html: content,

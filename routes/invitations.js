@@ -87,7 +87,7 @@ router.post('/', isClient, async (req, res) => {
         as: 'owner',
         attributes: ['id', 'userId', 'name'],
         include: [
-          { model: models.User },
+          { model: models.User, as: 'user' },
         ],
       }],
       transaction
@@ -132,9 +132,9 @@ router.post('/', isClient, async (req, res) => {
     // send notification to freelancer
     const freelancer = await models.Freelancer.findByPk(freelancerId,{
       include: [
-        { model: models.User, attributes: ['email'] }
+        { model: models.User, as: 'user', attributes: ['email'] }
       ]
-    })
+    });
     const content = `<html><body><p>Hi, you have new invitation for task <span style='font-weight:bold;'>${task.title}</span>`
                     +` from <span style='font-weight:bold;'>${task.owner.name}</span>.</p>`
                     +'<p>Click this link to visit our site: </p>'
@@ -142,7 +142,7 @@ router.post('/', isClient, async (req, res) => {
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       // to: task.owner.User.email, list of receivers
-      to: `<${freelancer.User.email}>`, // list of receivers
+      to: `<${freelancer.user.email}>`, // list of receivers
       subject: 'New task invitation - Cryptotask', // Subject line
       text: `Hi, you have new invitation for task ${task.title} from ${task.owner.name}`, // plain text body
       html: content

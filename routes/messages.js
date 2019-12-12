@@ -47,12 +47,14 @@ router.get('/threads', async (req, res) => {
       {
         model: models.Message,
         as: 'lastMessage',
+        required: false,
         include: [{
           model: models.User,
           as: 'sender',
+          required: false,
           include: [
-            { model: models.Freelancer, as: 'freelancer' },
-            { model: models.Client, as: 'client' },
+            { model: models.Freelancer, as: 'freelancer', required: false, },
+            { model: models.Client, as: 'client', required: false, },
           ]
         }],
       }
