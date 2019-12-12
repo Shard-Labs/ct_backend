@@ -149,7 +149,8 @@ class Chat {
               [Op.ne]: message.id
             },
             read: false,
-          }
+          },
+          transaction,
         });
 
         if (countUnread === 0) {
