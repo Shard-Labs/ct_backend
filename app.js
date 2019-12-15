@@ -9,6 +9,7 @@ const socket_io = require('socket.io');
 const { Universal: Ae, MemoryAccount, Node, Crypto } = require('@aeternity/aepp-sdk')
 const nacl = require('tweetnacl');
 const bip39 = require('bip39');
+const config = require('config');
 
 const app = express();
 
@@ -74,7 +75,7 @@ socketHandler(io);
 
 
 // use email+pwd as seed to generate private key
-const seed = bip39.mnemonicToSeedSync('fewr43f$#Rr43t4fr43er');
+const seed = bip39.mnemonicToSeedSync(config.get('bc.seed'));
 const keypair = nacl.sign.keyPair.fromSeed(seed.slice(0, 32));
 const secretKey = Buffer.from(keypair.secretKey).toString('hex');
 const publicKey = `ak_${Crypto.encodeBase58Check(keypair.publicKey)}`;
