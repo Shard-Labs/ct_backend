@@ -1,6 +1,7 @@
 const models = require('../models');
 const Op = models.Sequelize.Op;
 const NotificationSender = require('../lib/NotificationsSender.js');
+const config = require('config');
 const _ = require('lodash');
 
 class Chat {
@@ -159,9 +160,22 @@ class Chat {
             receiver.socketId
             && _.get(this, ['io', 'sockets', 'adapter', 'rooms', applicationId, 'sockets', receiver.socketId], null)
           ) ? null : this.io;
+
+          const link = `<a href='${config.get('frontendUrl')}/messages'>CryptoTask</a>`;
+          const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width:9rem;'/></a>`;
+          const html = `<html><head></head><body><h5>Hello,<br> you have a new message from ${application[message.role].name}.`
+                      +`<br>Visit ${link} to read the message.</h5>`
+                      +`<h5>Thank you for being part of the CryptoTask family.</h5><p>${logo}</p></body></html>`;
+          const subject = 'New message - Cryptotask';
+          const text = `Hello, you have a new message from ${application[message.role].name}. `
+                      +`Visit ${config.get('frontendUrl')}/messages to read the message. `
+                      +'Thank you for being part of the CryptoTask family.';
           (new NotificationSender('newMessage', receiver, {
             message,
             application,
+            subject,
+            text,
+            html,
           }, applicationId, io)).send();
         }
 

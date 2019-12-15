@@ -135,17 +135,26 @@ router.post('/', isClient, async (req, res) => {
         { model: models.User, as: 'user', attributes: ['email'] }
       ]
     });
-    const content = `<html><body><p>Hi, you have new invitation for task <span style='font-weight:bold;'>${task.title}</span>`
-                    +` from <span style='font-weight:bold;'>${task.owner.name}</span>.</p>`
-                    +'<p>Click this link to visit our site: </p>'
-                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
+    const link = `<a href='${config.get('frontendUrl')}/'>CryptoTask</a>`;
+    const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width:9rem;'/></a>`;
+    const content = '<html><head></head><body><h5>Hello,<br> you have been invited from '
+                    +`${task.owner.name} for project ${task.title}.`
+                    +`<br>Visit ${link} to review the invitation.</h5>`
+                    +`<h5>Thank you for being part of the CryptoTask family.</h5><p>${logo}</p></body></html>`;
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       // to: task.owner.User.email, list of receivers
       to: `<${freelancer.user.email}>`, // list of receivers
       subject: 'New task invitation - Cryptotask', // Subject line
-      text: `Hi, you have new invitation for task ${task.title} from ${task.owner.name}`, // plain text body
-      html: content
+      text: `Hello, you have been invited from ${task.owner.name} for project ${task.title}. `
+            +`Visit ${config.get('frontendUrl')}/ to review the invitation. `
+            +'Thank you for being part of the CryptoTask family.', // plain text body
+      html: content, // html body
+      attachments: [{
+        filename: 'logo.png',
+        path: __dirname + '/../assets/Logo/Cryptotask-logo.png',
+        cid: 'logo@cryptotask'
+      }], // attach logo to html
     });
 
     await transaction.commit();
