@@ -11,6 +11,11 @@ const constants = require('../lib/constants.js');
 const jwt = require('../middleware/jwt');
 const userMiddleware = require('../middleware/userMiddleware.js');
 
+const { Universal: Ae, MemoryAccount, Node, Crypto } = require('@aeternity/aepp-sdk')
+const nacl = require('tweetnacl');
+const bip39 = require('bip39');
+
+
 /**
  * Create new task
  */
@@ -57,7 +62,9 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     transaction = await models.sequelize.transaction();
 
     // save task
-    const task = await models.Task.create(_.omit(req.body, ['attachments', 'skills']), { transaction });
+    const task = await models.Task.create(_.omit(req.body, ['attachments', 'skills', 'publicKey', 'sig', 'nonce', 'descriptionHash']), { transaction });
+    console.log(req.body);
+    //console.log(task);
 
     // add association to client
     await user.client.addTask(task, { transaction });
@@ -108,6 +115,19 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     await es.index(searchData);
 
     await transaction.commit();
+
+
+    req.app.locals.contract.methods.postTask(req.body.publicKey, req.body.sig, req.body.nonce, 'postTask', req.body.title, req.body.descriptionHash, req.body.price, req.body.duration).then(resBc => {
+      console.log(resBc);
+      console.log(task);
+      models.sequelize.transaction().then(transactionUpdate => {
+        task.update({ bcID: resBc.decodedResult }, { transactionUpdate }).then(resUpdate => {
+          transactionUpdate.commit();
+          console.log('bcID updated successfully!');
+        });
+      });
+    }).catch(err => { console.log(err) });
+
 
     return res.json({
       success: true,

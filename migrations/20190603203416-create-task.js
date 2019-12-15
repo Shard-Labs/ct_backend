@@ -52,6 +52,11 @@ module.exports = {
         defaultValue: null,
         type: Sequelize.DATE
       },
+      bcID: {
+        allowNull: true,
+        defaultValue: null,
+        type: Sequelize.INTEGER
+      },
     });
   },
 
