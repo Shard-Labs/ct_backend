@@ -37,9 +37,10 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     duration: Joi.number().min(1).integer().required(),
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
     skills: Joi.array().items(skillsSchema).optional().allow(null),
-    publicKey: Joi.string().optional().allow(null),
-    sig: Joi.string().optional().allow(null),
-    nonce: Joi.string().optional().allow(null),
+    publicKey: Joi.any().optional().allow(null),
+    sig: Joi.any().optional().allow(null),
+    nonce: Joi.any().optional().allow(null),
+    descriptionHash: Joi.any().optional().allow(null),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -119,7 +120,7 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     await transaction.commit();
 
     // update task with smart contract id
-    if (req.body.publicKey && req.body.sig && req.body.nonce) {
+    if (req.body.publicKey && req.body.sig && req.body.nonce !== undefined && req.body.descriptionHash) {
       (smartContract.getContract())
         .methods
         .postTask(req.body.publicKey, req.body.sig, req.body.nonce, 'postTask', req.body.title, req.body.descriptionHash, req.body.price, req.body.duration)
