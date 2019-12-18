@@ -31,5 +31,8 @@
     "filesBucket": "ct-files",
     "chatBucket": "ct-chat-uploads",
     "taskAttachmentsBucket": "ct-task-attachments"
+  },
+  "bc": {
+    "seed": "xxx"
   }
 }

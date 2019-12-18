@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const cors = require('cors');
 const jwt = require('./middleware/jwt');
+const smartContract = require('./lib/smartContract.js');
 const socket_io = require('socket.io');
 
 const app = express();
@@ -66,5 +67,6 @@ app.use((err, req, res) => {
 });
 
 socketHandler(io);
+smartContract.initContract();
 
 module.exports = app;

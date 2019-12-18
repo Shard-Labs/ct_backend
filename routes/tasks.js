@@ -10,6 +10,7 @@ const Op = models.Sequelize.Op;
 const constants = require('../lib/constants.js');
 const jwt = require('../middleware/jwt');
 const userMiddleware = require('../middleware/userMiddleware.js');
+const smartContract = require('../lib/smartContract.js');
 
 /**
  * Create new task
@@ -36,6 +37,10 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     duration: Joi.number().min(1).integer().required(),
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
     skills: Joi.array().items(skillsSchema).optional().allow(null),
+    publicKey: Joi.any().optional().allow(null),
+    sig: Joi.any().optional().allow(null),
+    nonce: Joi.any().optional().allow(null),
+    descriptionHash: Joi.any().optional().allow(null),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -57,7 +62,10 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     transaction = await models.sequelize.transaction();
 
     // save task
-    const task = await models.Task.create(_.omit(req.body, ['attachments', 'skills']), { transaction });
+    const task = await models.Task.create(_.omit(req.body, [
+      'attachments', 'skills', 'publicKey', 'sig', 'nonce', 'descriptionHash'
+    ]), { transaction });
+    //console.log(task);
 
     // add association to client
     await user.client.addTask(task, { transaction });
@@ -105,9 +113,22 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
       }
     };
 
+    // index task data to elastic search
     await es.index(searchData);
 
+    // commit DB transaction
     await transaction.commit();
+
+    // update task with smart contract id
+    if (req.body.publicKey && req.body.sig && req.body.nonce !== undefined && req.body.descriptionHash) {
+      (smartContract.getContract())
+        .methods
+        .postTask(req.body.publicKey, req.body.sig, req.body.nonce, 'postTask', req.body.title, req.body.descriptionHash, req.body.price, req.body.duration)
+        .then(resBc => {
+          console.log(resBc);
+          task.update({ bcId: resBc.decodedResult });
+        });
+    }
 
     return res.json({
       success: true,

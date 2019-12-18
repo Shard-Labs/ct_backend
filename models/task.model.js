@@ -41,6 +41,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    bcId: {
+      allowNull: true,
+      defaultValue: null,
+      type: DataTypes.INTEGER
+    },
   }, {
     tableName: 'tasks',
     paranoid: true,
