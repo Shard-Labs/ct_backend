@@ -19,6 +19,7 @@ router.get('/', userMiddleware.getUser, async (req, res) => {
   const perPage = req.query.perPage || 20;
   const from = (page - 1) * perPage;
   const category = req.query.category;
+  const skill = req.query.skill;
 
   const searchBody = {
     from: from,
@@ -47,6 +48,10 @@ router.get('/', userMiddleware.getUser, async (req, res) => {
 
   if (category) {
     _.set(searchBody, 'query.bool.filter.1', { term: { categories: category, }, });
+  }
+
+  if (skill) {
+    _.set(searchBody, 'query.bool.filter.2', { term: { skills: skill, }, });
   }
 
   try {
