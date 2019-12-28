@@ -90,14 +90,24 @@ router.post('/register', async (req, res) => {
     }
 
     // send email confirmation message
-    const content = '<html><body><h5>Thanks for joining CryptoTask family, click this link to confirm your account:</h5>'
-                  +`<a href='${config.get('frontendUrl')}/confirm-email/${confirmationHash}'>Confirm account!</a></body></html>`;
+    const link = `<a href='${config.get('frontendUrl')}/confirm-email/${confirmationHash}'>&lt;this link&gt;</a>`;
+    const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width: 9rem;'/></a>`;
+    const content = '<html><head></head><body><h5>Hello,<br> thanks for joining CryptoTask family,'
+                  +`<br> click ${link} to confirm your account.</h5>`
+                  +`<h5>We wish you a pleasant stay.</h5><p>${logo}</p></body></html>`;
     await mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: `<${req.body.email}>`, // list of receivers
       subject: 'Email confirmation - Cryptotask', // Subject line
-      text: `${config.get('frontendUrl')}/confirm-email/${confirmationHash}`, // plain text body
-      html: content // html body
+      text: 'Hello, thanks for joining CryptoTask family, open this link '
+            +`${config.get('frontendUrl')}/confirm-email/${confirmationHash} to confirm your account.`
+            +' We wish you a pleasant stay.', // plain text body
+      html: content, // html body
+      attachments: [{
+        filename: 'logo.png',
+        path: __dirname + '/../assets/Logo/Cryptotask-logo.png',
+        cid: 'logo@cryptotask'
+      }], // attach logo to html
     });
 
     await transaction.commit();

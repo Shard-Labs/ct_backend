@@ -194,16 +194,24 @@ router.post('/', isFreelancer, async (req, res) => {
     await transaction.commit();
 
     // send notification to task owner
-    const content = `<html><body><p>Hi, you have new application for task <span style='font-weight:bold;'>${task.title}</span>`
-                    +` from <span style='font-weight:bold;'>${user.freelancer.name}</span>.</p>`
-                    +'<p>Click this link to visit our site: </p>'
-                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
+    const link = `<a href='${config.get('frontendUrl')}/my-tasks/${task.id}'>CryptoTask</a>`;
+    const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width: 9rem;'/></a>`;
+    const content = `<html><head></head><body><h5>Hello,<br> you have new application for task ${task.title}`
+                    +` from ${user.freelancer.name}. <br>Visit ${link} to review the application.</h5>`
+                    +`<h5>Thank you for being part of the CryptoTask family.</h5><p>${logo}</p></body></html>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: `<${task.owner.user.email}>`, // list of receivers
       subject: 'New task application - Cryptotask', // Subject line
-      text: `Hi, you have new application for task ${task.title} from ${user.freelancer.name}`, // plain text body
-      html: content,
+      text: `Hello, you have new application for task ${task.title} from ${user.freelancer.name}`
+            +` Visit ${config.get('frontendUrl')}/my-tasks/${task.id} to review the application.`
+            +'Thank you for being part of the CryptoTask family.', // plain text body
+      html: content, // html body
+      attachments: [{
+        filename: 'logo.png',
+        path: __dirname + '/../assets/Logo/Cryptotask-logo.png',
+        cid: 'logo@cryptotask'
+      }], // attach logo to html
     });
 
     return res.json({
@@ -259,15 +267,24 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
         { model: models.User, as: 'user', attributes: ['email'] }
       ]
     });
-    const content = `<html><body><p>Hi, you have been hired for task <span style='font-weight:bold;'>${task.title}</span>.</p>`
-                    +'<p>Click this link to visit our site: </p>'
-                    +`<a href='${config.get('frontendUrl')}'>Visit CRYPTOTASK!</a></body></html>`;
+    const link = `<a href='${config.get('frontendUrl')}/in-progress/${application.id}'>CryptoTask</a>`;
+    const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width:9rem;'/></a>`;
+    const content = '<html><head></head><body><h5>Hello,<br> you have been accepted from '
+                    +`${user.client.name} for project ${task.title}. <br>Visit ${link} to start working.</h5>`
+                    +`<h5>Thank you for being part of the CryptoTask family.</h5><p>${logo}</p></body></html>`;
     mailer.sendMail({
       from: config.get('email.defaultFrom'), // sender address
       to: `<${freelancer.user.email}>`, // list of receivers
       subject: 'Application accepted - Cryptotask', // Subject line
-      text: `Hi, you have been hired for task ${task.title}`, // Plain text body
-      html: content,
+      text: `Hello, you have been accepted from ${user.client.name} for project ${task.title}.`
+            +`Visit ${config.get('frontendUrl')}/in-progress/${application.id} to start working`
+            +'Thank you for being part of the CryptoTask family.', // Plain text body
+      html: content, // html body
+      attachments: [{
+        filename: 'logo.png',
+        path: __dirname + '/../assets/Logo/Cryptotask-logo.png',
+        cid: 'logo@cryptotask'
+      }], // attach logo to html
     });
 
     return res.json({
