@@ -127,6 +127,10 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
         .then(resBc => {
           console.log(resBc);
           task.update({ bcId: resBc.decodedResult });
+        })
+        .catch((err) => {
+          console.error(req.body.publicKey, req.body.sig, req.body.nonce, req.body.descriptionHash);
+          console.error(err);
         });
     }
 

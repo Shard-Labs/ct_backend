@@ -25,6 +25,7 @@ const freelancersRouter = require('./routes/freelancers');
 const clientsRouter = require('./routes/clients');
 const invitationsRouter = require('./routes/invitations');
 const notificationsRouter = require('./routes/notifications');
+const feedbacksRouter = require('./routes/feedbacks');
 
 app.use(cors());
 app.use(logger('dev'));
@@ -44,6 +45,7 @@ app.use('/freelancers', freelancersRouter);
 app.use('/clients', jwt.checkToken, clientsRouter);
 app.use('/invitations', jwt.checkToken, invitationsRouter);
 app.use('/notifications', jwt.checkToken, notificationsRouter);
+app.use('/feedbacks', jwt.checkToken, feedbacksRouter);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

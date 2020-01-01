@@ -33,6 +33,8 @@
     "taskAttachmentsBucket": "ct-task-attachments"
   },
   "bc": {
-    "seed": "xxx"
+    "seed": "xxx",
+    "address": "xxx",
+    "url": "https://xxx"
   }
 }
