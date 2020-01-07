@@ -259,6 +259,7 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     }).required(),
     skills: Joi.array().items(skillsSchema).optional(),
     categories: Joi.array().items(categoriesSchema).optional(),
+    published: Joi.boolean(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -280,10 +281,10 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     transaction = await models.sequelize.transaction();
 
     // update freelancer record
-    await user.freelancer.update({
-      ..._.omit(req.body, ['id', 'userId', 'avatar', 'skills', 'categories']),
-      published: true,
-    }, { transaction, });
+    await user.freelancer.update(
+      _.omit(req.body, ['id', 'userId', 'avatar', 'skills', 'categories']),
+      { transaction, }
+    );
 
     await user.freelancer.setAvatar(req.body.avatar ? req.body.avatar.id : null, { transaction });
 
