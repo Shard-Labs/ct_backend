@@ -479,6 +479,10 @@ router.get('/:taskId', userMiddleware.getUser, async (req, res) => {
         required: false,
         include: [
           {
+            model: models.Feedback,
+            as: 'feedback',
+          },
+          {
             model: models.Freelancer,
             as: 'freelancer',
             include: [

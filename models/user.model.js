@@ -71,11 +71,6 @@ module.exports = (sequelize, DataTypes) => {
       as: 'messages',
     });
 
-    User.hasMany(models.Feedback, {
-      foreignKey: 'userId',
-      as: 'feedbacks',
-    });
-
     User.belongsToMany(models.Role, {
       as: 'roles',
       through: 'userRole',

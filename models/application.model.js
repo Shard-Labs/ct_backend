@@ -68,6 +68,11 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'lastMessageId',
       as: 'lastMessage',
     });
+
+    Application.hasOne(models.Feedback, {
+      foreignKey: 'applicationId',
+      as: 'feedback',
+    });
   };
 
   return Application;

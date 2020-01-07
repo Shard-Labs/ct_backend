@@ -120,6 +120,13 @@ router.post('/', isFreelancer, async (req, res) => {
   const taskId = req.body.taskId;
   const user = req.decoded;
 
+  if (!user.freelancer.published) {
+    return res.status(401).json({
+      success: false,
+      message: 'Freelancer profile must be published to be able to apply for task!',
+    });
+  }
+
   let transaction;
 
   try {

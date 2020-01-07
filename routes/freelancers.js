@@ -188,12 +188,16 @@ router.post('/', jwt.checkToken, async (req, res) => {
       await freelancer.setAvatar(freelancerData.avatar.id, { transaction });
     }
 
+
     // index to elasticsearch
     const searchData = {
       index: config.get('es.freelancersIndexName'),
       id: freelancer.id,
       type: '_doc',
-      body: _.pick(req.body, ['firstName', 'lastName', 'occupation', 'location', 'bio', 'avatar']),
+      body: {
+        ..._.pick(req.body, ['firstName', 'lastName', 'occupation', 'location', 'bio', 'avatar']),
+        published: false,
+      },
     };
     await es.index(searchData);
 
@@ -232,12 +236,12 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     id: Joi.number().integer().required(),
     name: Joi.string().required(),
     categoryId: Joi.number().integer().required(),
-  }).optional();
+  }).required();
 
   const categoriesSchema = Joi.object().keys({
     id: Joi.number().integer().required(),
     name: Joi.string().required(),
-  }).optional();
+  }).required();
 
   // validation
   const schema = Joi.object().keys({
@@ -253,8 +257,8 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     avatar: Joi.object().keys({
       id: Joi.number().integer().required(),
     }).required(),
-    skills: Joi.array().items(skillsSchema).optional(),
-    categories: Joi.array().items(categoriesSchema).optional(),
+    skills: Joi.array().items(skillsSchema).required(),
+    categories: Joi.array().items(categoriesSchema).required(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -275,12 +279,13 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
   try {
     transaction = await models.sequelize.transaction();
 
-    const freelancerData = _.omit(req.body, ['id', 'userId']);
-
     // update freelancer record
-    await user.freelancer.update(freelancerData, { transaction, });
+    await user.freelancer.update({
+      ..._.omit(req.body, ['id', 'userId', 'avatar', 'skills', 'categories']),
+      published: true,
+    }, { transaction, });
 
-    await user.freelancer.setAvatar(freelancerData.avatar ? freelancerData.avatar.id : null, { transaction });
+    await user.freelancer.setAvatar(req.body.avatar ? req.body.avatar.id : null, { transaction });
 
     const skills = req.body.skills;
     const categories = req.body.categories;
@@ -348,6 +353,15 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
  */
 router.put('/publish', jwt.checkToken, isFreelancer, async (req, res) => {
   const user = req.decoded;
+  const fl = user.freelancer;
+
+  // check if all required data is set
+  if (!fl.firstName || !fl.lastName || !fl.pictureId || !fl.skills.length || !fl.categories.length) {
+    return res.status(400).json({
+      success: false,
+      message: 'Freelancer details missing',
+    });
+  }
 
   try {
     user.freelancer.published = true;
