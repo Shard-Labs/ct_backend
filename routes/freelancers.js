@@ -257,8 +257,8 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     avatar: Joi.object().keys({
       id: Joi.number().integer().required(),
     }).required(),
-    skills: Joi.array().items(skillsSchema).required(),
-    categories: Joi.array().items(categoriesSchema).required(),
+    skills: Joi.array().items(skillsSchema).optional(),
+    categories: Joi.array().items(categoriesSchema).optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
