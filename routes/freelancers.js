@@ -236,12 +236,12 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     id: Joi.number().integer().required(),
     name: Joi.string().required(),
     categoryId: Joi.number().integer().required(),
-  }).required();
+  }).optional();
 
   const categoriesSchema = Joi.object().keys({
     id: Joi.number().integer().required(),
     name: Joi.string().required(),
-  }).required();
+  }).optional();
 
   // validation
   const schema = Joi.object().keys({
