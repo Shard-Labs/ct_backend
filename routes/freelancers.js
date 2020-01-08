@@ -259,7 +259,7 @@ router.put('/', jwt.checkToken, isFreelancer, async (req, res) => {
     }).required(),
     skills: Joi.array().items(skillsSchema).optional(),
     categories: Joi.array().items(categoriesSchema).optional(),
-    published: Joi.boolean(),
+    published: Joi.boolean().optional(),
   });
 
   const validation = Joi.validate(req.body, schema, {
