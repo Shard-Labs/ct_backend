@@ -1,9 +1,16 @@
 const models = require('../models');
 const esClient = require('../lib/es.js');
-const config = require('config');
+const argv = require('yargs').argv;
+const _ = require('lodash');
 
-const reindex = async (index) => {
+const reindex = async () => {
+  if (argv.index || (argv.index && (argv.index === 'freelancers' || argv.index.indexOf('freelancers') > -1))) {
+    await reindexFreelancers();
+  }
 
+  if (argv.index || (argv.index && (argv.index === 'tasks' || argv.index.indexOf('tasks') > -1))) {
+    await reindexTasks();
+  }
 };
 
 const reindexFreelancers = async () => {
@@ -46,15 +53,63 @@ const reindexFreelancers = async () => {
     });
   });
 
-  console.log(body);
-
   try {
     const response = await esClient.bulk({ refresh: true, body });
-    console.log(response);
+    console.log('reIndexed freelancers', response);
   } catch (err) {
     console.error(err);
   }
-
 };
 
-reindexFreelancers();
+const reindexTasks = async () => {
+  const tasks = await models.Task.findAll({
+    include: [
+      {
+        model: models.Skill,
+        as: 'skills',
+        include: [
+          {
+            model: models.Category,
+            as: 'category'
+          }
+        ]
+      },
+      {
+        model: models.Client,
+        as: 'owner',
+      }
+    ]
+  });
+
+  const body = [];
+
+  tasks.forEach(task => {
+    body.push({
+      update: { _index: 'tasks', _id: task.id },
+    });
+    body.push({
+      doc: {
+        title: task.title,
+        description: task.description,
+        price: task.price,
+        duration: task.duration,
+        timePosted: task.createdAt,
+        location: task.location,
+        status: task.status,
+        postedBy: task.owner.name,
+        skills: task.skills ? task.skills.map(s => s.name) : [],
+        categories: task.skills ? _.uniq(task.skills.map(s => s.category.name)) : [],
+      },
+      doc_as_upsert: true,
+    });
+  });
+
+  try {
+    const response = await esClient.bulk({ refresh: true, body });
+    console.log('reIndexed tasks', response);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+reindex();

@@ -46,12 +46,16 @@ router.get('/', userMiddleware.getUser, async (req, res) => {
     };
   }
 
+  if ((category || skill) && !_.get(searchBody, 'query.bool.filter')) {
+    _.set(searchBody, 'query.bool.filter', []);
+  }
+
   if (category) {
-    _.set(searchBody, 'query.bool.filter.1', { term: { categories: category, }, });
+    searchBody.query.bool.filter.push({ term: { categories: category, }, });
   }
 
   if (skill) {
-    _.set(searchBody, 'query.bool.filter.2', { term: { skills: skill, }, });
+    searchBody.query.bool.filter.push({ term: { skills: skill, }, });
   }
 
   try {

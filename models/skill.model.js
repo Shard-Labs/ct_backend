@@ -21,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
   Skill.associate = models => {
     Skill.belongsTo(models.Category, {
       foreignKey: 'categoryId',
+      as: 'category',
     });
 
     Skill.belongsToMany(models.Freelancer, {
