@@ -1,0 +1,9 @@
+link(rel="stylesheet", href="/css/email.css", data-inline)
+p Hello,
+p you have new application for task <strong>#{task.title}</strong> from <strong>#{freelancer.name}</strong>,
+p
+    | Visit&nbsp;
+    a(href=frontendUrl + '/my-tasks/' + task.id) CryptoTask
+    | &nbsp;to review the application.
+p Thank you for being part of the CryptoTask family.
+img(src='/images/logo.png')

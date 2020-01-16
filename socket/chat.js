@@ -170,6 +170,8 @@ class Chat {
           const text = `Hello, you have a new message from ${application[message.role].name}. `
                       +`Visit ${config.get('frontendUrl')}/messages to read the message. `
                       +'Thank you for being part of the CryptoTask family.';
+
+          // send new notification to receiver
           (new NotificationSender('newMessage', receiver, {
             message,
             application,
@@ -243,6 +245,23 @@ class Chat {
       id: this.userId,
       name: data.userName
     });
+  }
+
+  /**
+   * Freelancer applied to task, notify client
+   * @param {Object} application
+   * @return {Promise<void>}
+   */
+  async freelancerApplied(application) {
+    if (_.get(application, 'client.user.id')) {
+      // check if receiver online
+      const receiver = await models.User.findByPk(application.client.user.id);
+
+      if (receiver.online && receiver.socketId) {
+        // update unread messages for receiver
+        this.io.to(`${receiver.socketId}`).emit('newApplication', application);
+      }
+    }
   }
 }
 

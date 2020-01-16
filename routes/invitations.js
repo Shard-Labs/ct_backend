@@ -130,33 +130,22 @@ router.post('/', isClient, async (req, res) => {
     }, { transaction });
 
     // send notification to freelancer
-    const freelancer = await models.Freelancer.findByPk(freelancerId,{
+    const freelancer = await models.Freelancer.findByPk(freelancerId, {
       include: [
         { model: models.User, as: 'user', attributes: ['email'] }
       ]
     });
-    const link = `<a href='${config.get('frontendUrl')}/tasks/${task.id}'>CryptoTask</a>`;
-    const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width:9rem;'/></a>`;
-    const content = '<html><head></head><body><h5>Hello,<br> you have been invited from '
-                    +`${task.owner.name} for project ${task.title}.`
-                    +`<br>Visit ${link} to review the invitation.</h5>`
-                    +`<h5>${task.owner.name} sent you this message with the application:</h5><p>${newInvitation.letter}</p>`
-                    +`<h5>Thank you for being part of the CryptoTask family.</h5><p>${logo}</p></body></html>`;
-    await mailer.sendMail({
-      from: config.get('email.defaultFrom'), // sender address
-      // to: task.owner.User.email, list of receivers
-      to: `<${freelancer.user.email}>`, // list of receivers
-      subject: 'New task invitation - Cryptotask', // Subject line
-      text: `Hello, you have been invited from ${task.owner.name} for project ${task.title}. `
-            +`Visit ${config.get('frontendUrl')}/tasks/${task.id} to review the invitation. `
-            +`${task.owner.name} sent you this message with the application: ${newInvitation.letter}`
-            +'Thank you for being part of the CryptoTask family.', // plain text body
-      html: content, // html body
-      attachments: [{
-        filename: 'logo.png',
-        path: __dirname + '/../assets/Logo/Cryptotask-logo.png',
-        cid: 'logo@cryptotask'
-      }], // attach logo to html
+
+    await mailer.send({
+      template: 'invitation',
+      message: {
+        to: freelancer.user.email
+      },
+      locals: {
+        task: task,
+        invitation: newInvitation,
+        frontendUrl: config.get('frontendUrl'),
+      },
     });
 
     await transaction.commit();

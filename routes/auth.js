@@ -90,24 +90,15 @@ router.post('/register', async (req, res) => {
     }
 
     // send email confirmation message
-    const link = `<a href='${config.get('frontendUrl')}/confirm-email/${confirmationHash}'>&lt;this link&gt;</a>`;
-    const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width: 9rem;'/></a>`;
-    const content = '<html><head></head><body><h5>Hello,<br> thanks for joining CryptoTask family,'
-                  +`<br> click ${link} to confirm your account.</h5>`
-                  +`<h5>We wish you a pleasant stay.</h5><p>${logo}</p></body></html>`;
-    await mailer.sendMail({
-      from: config.get('email.defaultFrom'), // sender address
-      to: `<${req.body.email}>`, // list of receivers
-      subject: 'Email confirmation - Cryptotask', // Subject line
-      text: 'Hello, thanks for joining CryptoTask family, open this link '
-            +`${config.get('frontendUrl')}/confirm-email/${confirmationHash} to confirm your account.`
-            +' We wish you a pleasant stay.', // plain text body
-      html: content, // html body
-      attachments: [{
-        filename: 'logo.png',
-        path: __dirname + '/../assets/Logo/Cryptotask-logo.png',
-        cid: 'logo@cryptotask'
-      }], // attach logo to html
+    await mailer.send({
+      template: 'confirmation',
+      message: {
+        to: req.body.email
+      },
+      locals: {
+        hash: confirmationHash,
+        frontendUrl: config.get('frontendUrl'),
+      },
     });
 
     await transaction.commit();
@@ -295,15 +286,16 @@ router.post('/forgot-password', async (req, res) => {
     });
   }
 
-  // send email confirmation message
-  const content = '<html><body><h5>Click this link to reset your password:</h5>'
-                  +`<a href='${config.get('frontendUrl')}/reset-password/${resetToken}'>Reset password!</a></body></html>`;
-  await mailer.sendMail({
-    from: config.get('email.defaultFrom'), // sender address
-    to: `<${req.body.email}>`, // list of receivers
-    subject: 'Password reset - Cryptotask', // Subject line
-    text: `${config.get('frontendUrl')}/reset-password/${resetToken}`, // plain text body
-    html: content // html body
+  // send reset password email
+  await mailer.send({
+    template: 'resetPassword',
+    message: {
+      to: req.body.email
+    },
+    locals: {
+      resetToken,
+      frontendUrl: config.get('frontendUrl'),
+    },
   });
 
   return res.json({
