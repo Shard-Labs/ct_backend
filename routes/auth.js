@@ -148,7 +148,13 @@ router.post('/login', async (req, res) => {
         email: req.body.email,
         emailConfirmed: true,
         active: true,
-      }
+      },
+      include: [
+        {
+          model: models.Role,
+          as: 'roles',
+        },
+      ],
     });
 
     if (!user) {
@@ -176,6 +182,16 @@ router.post('/login', async (req, res) => {
       config.get('jwt.secret'),
       { expiresIn: '24h' }
     );
+
+    // set last login date as current one
+    user.lastLogin = new Date();
+
+    // if there is no active role set then update it with first assigned role
+    if (!user.activeRoleId) {
+      user.activeRoleId = user.roles[0].id;
+    }
+
+    user.save();
 
     return res.json({
       success: true,

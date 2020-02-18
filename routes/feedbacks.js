@@ -1,22 +1,56 @@
 const express = require('express');
 const router = express.Router();
 const models = require('../models');
-const isClient = require('../middleware/isClient.js');
-const isFreelancer = require('../middleware/isFreelancer.js');
 const Joi = require('@hapi/joi');
 const constants = require('../lib/constants.js');
+const moment = require('moment');
+const config = require('config');
+const FeedbackChecker = require('../lib/FeedbackChecker.js');
 
 /**
- * Create new feedback for client and finish application
+ * Get feedback for application
  */
-router.post('/client', isClient, async (req, res) => {
+router.get('/:applicationId', async (req, res) => {
+  const user = req.decoded;
+
+  if (user.activeRoleId) {
+    const feedback = await models.Feedback.findOne({
+      where: {
+        applicationId: req.params.applicationId,
+      }
+    });
+
+    const date = moment(feedback.createdAt);
+    const diff = moment().diff(date, 'days');
+
+    if ((!feedback.clientFeedback || !feedback.freelancerFeedback) && diff < config.get('feedbackVisibleAfter')) {
+      return res.json({
+        success: true,
+        data: {
+          createdAt: feedback.createdAt,
+        },
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: feedback,
+    });
+  }
+});
+
+/**
+ * Create new feedback and finish application
+ */
+router.post('/', async (req, res) => {
   const user = req.decoded;
 
   // validation
   const schema = Joi.object().keys({
-    applicationId: Joi.integer().required(),
-    rate: Joi.integer().required(),
+    applicationId: Joi.number().integer().required(),
+    rate: Joi.number().integer().required(),
     message: Joi.string().required(),
+    status: Joi.number().integer().required(),
   });
 
   const validation = Joi.validate(req.body, schema, {
@@ -34,24 +68,25 @@ router.post('/client', isClient, async (req, res) => {
 
   const application = await models.Application.findByPk(req.body.applicationId);
 
-  if (!application || application.clientId !== user.client.id) {
+  if (!application) {
     return res.status(401).json({
       success: false,
       message: 'Unauthorized',
     });
   }
 
-  const exists = await models.Feedback.findOne({
+  // try to find existing feedback for application
+  let feedback = await models.Feedback.findOne({
     where: {
       applicationId: req.body.applicationId,
-      clientId: req.body.clientId,
     }
   });
 
-  if (exists) {
-    return res.status(400).json({
+  // check if feedback already exists and if its visible by date
+  if (feedback && FeedbackChecker.isVisible(feedback.createdAt)) {
+    return res.status(401).json({
       success: false,
-      message: 'Feedback already exists',
+      message: 'Feedback too old to update!',
     });
   }
 
@@ -60,94 +95,76 @@ router.post('/client', isClient, async (req, res) => {
   try {
     transaction = await models.sequelize.transaction();
 
-    // create new feedback record
-    await models.Feedback.create({
-      applicationId: req.body.applicationId,
-      clientId: user.client.id,
-      clientRate: req.body.rate,
-      clientFeedback: req.body.message
-    }, { transaction });
+    if (user.activeRoleId === constants.roles.FREELANCER) {
+      if (feedback && feedback.freelancerRate) {
+        if (transaction) await transaction.rollback();
 
-    // set application status to finished
-    application.status = constants.applicationStatuses.FINISHED;
+        return res.status(400).json({
+          success: false,
+          message: 'Freelancer already set feedback',
+        });
+      }
+
+      if (!feedback) {
+        feedback = await models.Feedback.create({
+          applicationId: req.body.applicationId,
+          freelancerId: user.freelancer.id,
+          freelancerRate: req.body.rate,
+          freelancerFeedback: req.body.message,
+          freelancerCreatedAt: new Date(),
+          clientId: application.clientId,
+        }, { transaction });
+      } else {
+        feedback.freelancerRate = req.body.rate;
+        feedback.freelancerFeedback = req.body.message;
+        feedback.freelancerCreatedAt = new Date();
+        await feedback.save({ transaction });
+      }
+    } else if (user.activeRoleId === constants.roles.CLIENT) {
+      if (feedback && feedback.clientRate) {
+        if (transaction) await transaction.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message: 'Client already set feedback',
+        });
+      }
+
+      if (!feedback) {
+        feedback = await models.Feedback.create({
+          applicationId: req.body.applicationId,
+          clientId: user.client.id,
+          clientRate: req.body.rate,
+          clientFeedback: req.body.message,
+          clientCreatedAt: new Date(),
+          freelancerId: application.freelancerId,
+        }, { transaction });
+      } else {
+        feedback.clientRate = req.body.rate;
+        feedback.clientFeedback = req.body.message;
+        feedback.clientCreatedAt = new Date();
+        await feedback.save({ transaction });
+      }
+    }
+
+    // set application status to finished or canceled
+    application.status = req.body.status;
     await application.save({ transaction });
 
-    return res.json({
-      success: true,
-    });
-  } catch (err) {
-    return res.status(400).json({
-      success: false,
-      message: 'Something went wrong',
-      data: err.message
-    });
-  }
-});
-
-/**
- * Create new feedback for client
- */
-router.post('/freelancer', isFreelancer, async (req, res) => {
-  const user = req.decoded;
-
-  // validation
-  const schema = Joi.object().keys({
-    applicationId: Joi.integer().required(),
-    rate: Joi.integer().required(),
-    message: Joi.string().required(),
-  });
-
-  const validation = Joi.validate(req.body, schema, {
-    abortEarly: false,
-    allowUnknown: true,
-  });
-
-  if (validation.error) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation error',
-      data: validation.error
-    });
-  }
-
-  const application = await models.Application.findByPk(req.body.applicationId);
-
-  if (!application || application.freelancerId !== user.freelancer.id) {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized',
-    });
-  }
-
-  const feedback = await models.Feedback.findOne({
-    where: {
-      applicationId: req.body.applicationId,
-      freelancerId: req.body.freelancerId,
-    }
-  });
-
-  if (!feedback || feedback.freelancerRate) {
-    return res.status(400).json({
-      success: false,
-      message: 'Feedback already exists',
-    });
-  }
-
-  try {
-    feedback.freelancerRate = req.body.rate;
-    feedback.freelancerFeedback = req.body.message;
-    feedback.freelancerCreatedAt = new Date();
-
-    await feedback.save();
+    await transaction.commit();
 
     return res.json({
       success: true,
+      data: feedback,
     });
   } catch (err) {
+    console.error(err);
+
+    if (transaction) await transaction.rollback();
+
     return res.status(400).json({
       success: false,
-      message: 'Something went wrong',
-      data: err.message
+      message: err.message,
     });
   }
 });

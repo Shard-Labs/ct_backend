@@ -43,6 +43,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       defaultValue: null,
     },
+    activeRoleId: {
+      type: DataTypes.INTEGER,
+      defaultValue: null,
+    },
+    lastLogin: {
+      allowNull: true,
+      type: DataTypes.DATE,
+    },
   }, {
     tableName: 'users',
     defaultScope: {
@@ -76,6 +84,11 @@ module.exports = (sequelize, DataTypes) => {
       through: 'userRole',
       foreignKey: 'userId',
       otherKey: 'roleId',
+    });
+
+    User.belongsTo(models.Role, {
+      foreignKey: 'activeRoleId',
+      as: 'activeRole',
     });
   };
 

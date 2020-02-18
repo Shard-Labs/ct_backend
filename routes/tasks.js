@@ -468,6 +468,13 @@ router.get('/:taskId', userMiddleware.getUser, async (req, res) => {
           freelancerId: user.freelancer.id
         },
         required: false,
+        include: [
+          {
+            model: models.Feedback,
+            as: 'feedback',
+            required: false,
+          },
+        ]
       });
     } else if (user.client) {
       include.push({
@@ -481,6 +488,7 @@ router.get('/:taskId', userMiddleware.getUser, async (req, res) => {
           {
             model: models.Feedback,
             as: 'feedback',
+            required: false,
           },
           {
             model: models.Freelancer,

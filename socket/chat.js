@@ -141,45 +141,17 @@ class Chat {
           this.io.to(`${receiver.socketId}`).emit('messageReceived', message);
         }
 
-        // send notification to receiver but first check if this new message is the only one
-        // if there are more unread messages then don't send notification, only on first one
-        const countUnread = await models.Message.count({
-          where: {
-            applicationId: applicationId,
-            id: {
-              [Op.ne]: message.id
-            },
-            read: false,
-          },
-          transaction,
-        });
+        // check if user is already in chat (in sockets room)
+        const io = (
+          receiver.socketId
+          && _.get(this, ['io', 'sockets', 'adapter', 'rooms', applicationId, 'sockets', receiver.socketId], null)
+        ) ? null : this.io;
 
-        if (countUnread === 0) {
-          // check if user is already in chat (in sockets room)
-          const io = (
-            receiver.socketId
-            && _.get(this, ['io', 'sockets', 'adapter', 'rooms', applicationId, 'sockets', receiver.socketId], null)
-          ) ? null : this.io;
-
-          const link = `<a href='${config.get('frontendUrl')}/messages'>CryptoTask</a>`;
-          const logo = `<a href='${config.get('frontendUrl')}'><img alt='cryptotask' src='cid:logo@cryptotask' style='width:9rem;'/></a>`;
-          const html = `<html><head></head><body><h5>Hello,<br> you have a new message from ${application[message.role].name}.`
-                      +`<br>Visit ${link} to read the message.</h5>`
-                      +`<h5>Thank you for being part of the CryptoTask family.</h5><p>${logo}</p></body></html>`;
-          const subject = 'New message - Cryptotask';
-          const text = `Hello, you have a new message from ${application[message.role].name}. `
-                      +`Visit ${config.get('frontendUrl')}/messages to read the message. `
-                      +'Thank you for being part of the CryptoTask family.';
-
-          // send new notification to receiver
-          (new NotificationSender('newMessage', receiver, {
-            message,
-            application,
-            subject,
-            text,
-            html,
-          }, applicationId, io)).send();
-        }
+        // send new notification to receiver
+        (new NotificationSender('newMessage', receiver, {
+          message,
+          application,
+        }, applicationId, io)).send();
 
         await transaction.commit();
       } catch (err) {

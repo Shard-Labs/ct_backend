@@ -36,5 +36,6 @@
     "seed": "xxx",
     "address": "xxx",
     "url": "https://xxx"
-  }
+  },
+  "feedbackVisibleAfter": 3
 }

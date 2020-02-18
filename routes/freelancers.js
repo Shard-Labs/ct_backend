@@ -78,6 +78,41 @@ router.get('/', userMiddleware.getUser, async (req, res) => {
 });
 
 /**
+ * Get all freelancers feedbacks
+ */
+router.get('/:id/feedbacks', userMiddleware.getUser, async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const feedbacks = await models.Feedback.findAll({
+      where: {
+        freelancerId: id,
+      },
+      include: [
+        { model: models.Client, as: 'client' },
+        {
+          model: models.Application, as: 'application', attributes: ['id', 'taskId'], include: [
+            { model: models.Task, as: 'task' },
+          ]
+        },
+      ]
+    });
+
+    return res.json({
+      success: true,
+      data: feedbacks
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
+});
+
+/**
  * Get single freelancer
  */
 router.get('/:id', userMiddleware.getUser, async (req, res) => {

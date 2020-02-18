@@ -6,7 +6,6 @@ const isFreelancer = require('../middleware/isFreelancer.js');
 const isClient = require('../middleware/isClient.js');
 const config = require('config');
 const constants = require('../lib/constants.js');
-const Op = models.Sequelize.Op;
 
 /**
  * Get all freelancer applications with related tasks and clients
@@ -82,7 +81,8 @@ router.get('/:applicationId', async (req, res) => {
       },
       { model: models.Client, as: 'client', required: false, },
       { model: models.Freelancer, as: 'freelancer', required: false, },
-    ]
+      { model: models.Feedback, as: 'feedback', required: false, },
+    ],
   });
 
   if (!application) {

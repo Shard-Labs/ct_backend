@@ -31,11 +31,15 @@ module.exports = {
       },
       clientRate: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       clientFeedback: {
         type: Sequelize.TEXT,
-        allowNull: false,
+        allowNull: true,
+      },
+      clientCreatedAt: {
+        allowNull: true,
+        type: Sequelize.DATE
       },
       freelancerId: {
         type: Sequelize.INTEGER,

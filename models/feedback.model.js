@@ -1,3 +1,5 @@
+const FeedbackChecker = require('../lib/FeedbackChecker.js');
+
 'use strict';
 module.exports = (sequelize, DataTypes) => {
   const Feedback = sequelize.define('Feedback', {
@@ -17,11 +19,33 @@ module.exports = (sequelize, DataTypes) => {
     },
     clientRate: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
+      get() {
+        const fr = this.getDataValue('freelancerRate');
+
+        if (!fr && !FeedbackChecker.isVisible(this.getDataValue('createdAt'))) {
+          return null;
+        }
+
+        return this.getDataValue('clientRate');
+      }
     },
     clientFeedback: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
+      get() {
+        const fr = this.getDataValue('freelancerRate');
+
+        if (!fr && !FeedbackChecker.isVisible(this.getDataValue('createdAt'))) {
+          return null;
+        }
+
+        return this.getDataValue('clientFeedback');
+      }
+    },
+    clientCreatedAt: {
+      allowNull: true,
+      type: DataTypes.DATE
     },
     freelancerId: {
       type: DataTypes.INTEGER,
@@ -30,10 +54,28 @@ module.exports = (sequelize, DataTypes) => {
     freelancerRate: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      get() {
+        const fr = this.getDataValue('clientRate');
+
+        if (!fr && !FeedbackChecker.isVisible(this.getDataValue('createdAt'))) {
+          return null;
+        }
+
+        return this.getDataValue('freelancerRate');
+      }
     },
     freelancerFeedback: {
       type: DataTypes.TEXT,
       allowNull: true,
+      get() {
+        const fr = this.getDataValue('clientRate');
+
+        if (!fr && !FeedbackChecker.isVisible(this.getDataValue('createdAt'))) {
+          return null;
+        }
+
+        return this.getDataValue('freelancerFeedback');
+      }
     },
     freelancerCreatedAt: {
       allowNull: true,
