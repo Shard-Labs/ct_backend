@@ -13,8 +13,14 @@
     "price": {
       "type": "integer"
     },
+    "negotiablePrice": {
+      "type": "boolean"
+    },
     "duration": {
       "type": "integer"
+    },
+    "negotiableDuration": {
+      "type": "boolean"
     },
     "timePosted": {
       "type": "date"

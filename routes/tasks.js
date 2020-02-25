@@ -33,8 +33,18 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     description: Joi.string().required(),
     location: Joi.string().allow(null),
     type: Joi.string().allow(null),
-    price: Joi.number().min(1).integer().required(),
-    duration: Joi.number().min(1).integer().required(),
+    price: Joi.any().when('negotiablePrice', {
+      is: true,
+      then: Joi.number().integer().optional().allow(null),
+      otherwise: Joi.number().min(1).integer().required()
+    }),
+    negotiablePrice: Joi.boolean().optional(),
+    duration: Joi.any().when('negotiableDuration', {
+      is: true,
+      then: Joi.number().integer().optional().allow(null),
+      otherwise: Joi.number().min(1).integer().required()
+    }),
+    negotiableDuration: Joi.boolean().optional(),
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
     skills: Joi.array().items(skillsSchema).optional().allow(null),
     publicKey: Joi.any().optional().allow(null),
@@ -103,7 +113,9 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
         title: task.title,
         description: task.description,
         price: task.price,
+        negotiablePrice: task.negotiablePrice,
         duration: task.duration,
+        negotiableDuration: task.negotiableDuration,
         timePosted: task.createdAt,
         location: task.location,
         status: constants.taskStatuses.CREATED,
@@ -198,8 +210,18 @@ router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
     postedBy: Joi.number().integer().optional(),
     title: Joi.string().required(),
     description: Joi.string().required(),
-    price: Joi.number().min(1).integer().required(),
-    duration: Joi.number().min(1).integer().required(),
+    price: Joi.any().when('negotiablePrice', {
+      is: true,
+      then: Joi.number().integer().optional().allow(null),
+      otherwise: Joi.number().min(1).integer().required()
+    }),
+    negotiablePrice: Joi.boolean().optional(),
+    duration: Joi.any().when('negotiableDuration', {
+      is: true,
+      then: Joi.number().integer().optional().allow(null),
+      otherwise: Joi.number().min(1).integer().required()
+    }),
+    negotiableDuration: Joi.boolean().optional(),
     status: Joi.number().optional(),
     attachments: Joi.array().items(attachmentsSchema).optional(),
     skills: Joi.array().items(skillsSchema).optional(),
@@ -220,7 +242,7 @@ router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
     });
   }
 
-  const taskData = _.pick(req.body, ['title', 'description', 'price', 'duration', 'location', 'type']);
+  const taskData = _.pick(req.body, ['title', 'description', 'price', 'negotiablePrice', 'duration', 'negotiableDuration', 'location', 'type']);
 
   let transaction;
 
@@ -262,7 +284,9 @@ router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
           title: task.title,
           description: task.description,
           price: task.price,
+          negotiablePrice: task.negotiablePrice,
           duration: task.duration,
+          negotiableDuration: task.negotiableDuration,
           timePosted: task.createdAt,
           status: task.status,
           location: task.location,
