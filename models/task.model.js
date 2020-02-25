@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     price: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      allowNull: true,
     },
     negotiablePrice: {
       type: DataTypes.BOOLEAN,
@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     duration: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     negotiableDuration: {
       type: DataTypes.BOOLEAN,
