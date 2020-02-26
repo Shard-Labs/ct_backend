@@ -4,7 +4,7 @@ const models = require('../models');
 const _ = require('lodash');
 const Joi = require('@hapi/joi');
 const isClient = require('../middleware/isClient.js');
-const storage = require('../lib/storage.js');
+const userMiddleware = require('../middleware/userMiddleware.js');
 
 /**
  * Create new client user
@@ -150,40 +150,95 @@ router.put('/', isClient, async (req, res) => {
 });
 
 /**
- * Get clients avatar signed URL from amazon S3
+ * Get all client tasks
  */
-router.get('/:clientId/avatar', async (req, res) => {
-  const clientId = req.params.clientId;
+router.get('/:id/tasks', userMiddleware.getUser, async (req, res) => {
+  const id = req.params.id;
 
-  const client = await models.Client.findByPk(clientId, {
-    include: [
-      { model: models.File, as: 'avatar' }
-    ]
-  });
+  try {
+    const tasks = await models.Task.findAll({
+      where: {
+        postedBy: id,
+      },
+      order: [
+        ['createdAt', 'DESC'],
+      ],
+    });
 
-  if (client.avatar) {
-    try {
-      const key = client.avatar.fileName;
-      const params = { Bucket: config.get('storage.privateBucket'), Key: key };
-      const url = await storage.getSignedUrl('getObject', params);
+    return res.json({
+      success: true,
+      data: tasks
+    });
+  } catch (err) {
+    console.error(err);
 
-      return res.json({
-        success: true,
-        data: url,
-      });
-    } catch (err) {
-      return res.status(400).json({
-        success: false,
-        message: 'Something went wrong',
-        data: err.message
-      });
-    }
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+    });
   }
+});
 
-  return res.status(404).json({
-    success: false,
-    message: 'Avatar not found',
-  });
+/**
+ * Get all client feedbacks
+ */
+router.get('/:id/feedbacks', userMiddleware.getUser, async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const feedbacks = await models.Feedback.findAll({
+      where: {
+        clientId: id,
+      },
+      include: [
+        { model: models.Freelancer, as: 'freelancer' },
+        {
+          model: models.Application, as: 'application', attributes: ['id', 'taskId'], include: [
+            { model: models.Task, as: 'task' },
+          ]
+        },
+      ]
+    });
+
+    return res.json({
+      success: true,
+      data: feedbacks
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
+});
+
+/**
+ * Get client data
+ */
+router.get('/:id', userMiddleware.getUser, async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const client = await models.Client.findByPk(id, {
+      include: [
+        { model: models.File, as: 'avatar' },
+      ]
+    });
+
+    return res.json({
+      success: true,
+      data: client
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
 });
 
 module.exports = router;
