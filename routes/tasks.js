@@ -167,6 +167,71 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
 /**
  * Edit task
  */
+router.put('/:taskId/reopen', jwt.checkToken, isClient, async (req, res) => {
+  const { client } = req.decoded;
+  const task = await models.Task.findByPk(req.params.taskId);
+
+  // task does not exist
+  if (!task) {
+    return res.status(404).json({
+      success: false,
+      message: 'Task not found!',
+    });
+  }
+
+  // user can only edit his own tasks
+  if (task.postedBy !== client.id) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized!',
+    });
+  }
+
+  let transaction;
+
+  try {
+    transaction = await models.sequelize.transaction();
+
+    task.status = constants.taskStatuses.ACCEPTING;
+    task.save({ transaction });
+
+    // update in elastic
+    const searchData = {
+      index: config.get('es.tasksIndexName'),
+      id: task.id,
+      type: '_doc',
+      body: {
+        doc: {
+          status: task.status,
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+
+    await es.update(searchData);
+
+    // commit DB transaction
+    await transaction.commit();
+
+    return res.json({
+      success: true,
+      message: 'Task successfully updated',
+      data: task,
+    });
+  } catch (e) {
+    if (transaction) await transaction.rollback();
+
+    res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
+      data: e.message
+    });
+  }
+});
+
+/**
+ * Edit task
+ */
 router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
   const user = req.decoded;
   const task = await models.Task.findByPk(req.params.taskId);
@@ -398,8 +463,14 @@ router.get('/search', userMiddleware.getUser, async (req, res) => {
     });
   }
 
+  // filter out by status
+  _.set(searchBody, 'query.bool.filter.0.terms.status', [
+    constants.taskStatuses.CREATED,
+    constants.taskStatuses.ACCEPTING
+  ]);
+
   if (category) {
-    _.set(searchBody, 'query.bool.filter.0', { term: { categories: category, }, });
+    _.set(searchBody, 'query.bool.filter.1.term.categories', category);
   }
 
   try {

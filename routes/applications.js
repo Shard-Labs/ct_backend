@@ -6,6 +6,7 @@ const isFreelancer = require('../middleware/isFreelancer.js');
 const isClient = require('../middleware/isClient.js');
 const config = require('config');
 const constants = require('../lib/constants.js');
+const es = require('../lib/es');
 
 /**
  * Get all freelancer applications with related tasks and clients
@@ -290,8 +291,23 @@ router.put('/:applicationId/hire', isClient, async (req, res) => {
     await application.save({ transaction });
 
     // update task status to Hired
-    task.status = constants.taskStatuses.HIRED;
+    task.status = constants.taskStatuses.FILLED;
     await task.save({ transaction });
+
+    // update in elastic
+    const searchData = {
+      index: config.get('es.tasksIndexName'),
+      id: task.id,
+      type: '_doc',
+      body: {
+        doc: {
+          status: task.status,
+        },
+        doc_as_upsert: true, // upsert if not already there
+      },
+    };
+
+    await es.update(searchData);
 
     await transaction.commit();
 
