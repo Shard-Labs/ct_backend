@@ -215,6 +215,37 @@ router.get('/:id/feedbacks', userMiddleware.getUser, async (req, res) => {
 });
 
 /**
+ * Calculate average client rate
+ */
+router.get('/:id/rate', async (req, res) => {
+  const id = req.params.id;
+
+  const data = await models.Feedback.findAll({
+    where: {
+      clientId: id,
+    },
+  });
+
+  let totalRate = 0;
+  let countItems = 0;
+
+  data.forEach(f => {
+    if (f.freelancerRate) {
+      countItems++;
+      totalRate += f.freelancerRate;
+    }
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      rate: countItems > 0 ? parseFloat((totalRate / countItems).toFixed(1)) : 0,
+      count: countItems,
+    },
+  });
+});
+
+/**
  * Get client data
  */
 router.get('/:id', userMiddleware.getUser, async (req, res) => {

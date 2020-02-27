@@ -9,6 +9,7 @@ const es = require('../lib/es');
 const config = require('config');
 const jwt = require('../middleware/jwt');
 const userMiddleware = require('../middleware/userMiddleware.js');
+const Op = models.Sequelize.Op;
 
 /**
  * Search freelancers
@@ -110,6 +111,37 @@ router.get('/:id/feedbacks', userMiddleware.getUser, async (req, res) => {
       message: 'Something went wrong',
     });
   }
+});
+
+/**
+ * Calculate average freelancer rate
+ */
+router.get('/:id/rate', async (req, res) => {
+  const id = req.params.id;
+
+  const data = await models.Feedback.findAll({
+    where: {
+      freelancerId: id,
+    },
+  });
+
+  let totalRate = 0;
+  let countItems = 0;
+
+  data.forEach(f => {
+    if (f.clientRate) {
+      countItems++;
+      totalRate += f.clientRate;
+    }
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      rate: countItems > 0 ? parseFloat((totalRate / countItems).toFixed(1)) : 0,
+      count: countItems,
+    },
+  });
 });
 
 /**
