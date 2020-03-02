@@ -4,12 +4,12 @@ const models = require('../models');
 const _ = require('lodash');
 const Joi = require('@hapi/joi');
 const isClient = require('../middleware/isClient.js');
-const userMiddleware = require('../middleware/userMiddleware.js');
+const jwt = require('../middleware/jwt');
 
 /**
  * Create new client user
  */
-router.post('/', async (req, res) => {
+router.post('/', jwt.checkToken, async (req, res) => {
   const user = req.decoded;
 
   // validation
@@ -84,7 +84,7 @@ router.post('/', async (req, res) => {
 /**
  * Update client basic profile
  */
-router.put('/', isClient, async (req, res) => {
+router.put('/', jwt.checkToken, isClient, async (req, res) => {
   const user = req.decoded;
 
   // validation
@@ -152,7 +152,7 @@ router.put('/', isClient, async (req, res) => {
 /**
  * Get all client tasks
  */
-router.get('/:id/tasks', userMiddleware.getUser, async (req, res) => {
+router.get('/:id/tasks', async (req, res) => {
   const id = req.params.id;
 
   try {
@@ -182,7 +182,7 @@ router.get('/:id/tasks', userMiddleware.getUser, async (req, res) => {
 /**
  * Get all client feedbacks
  */
-router.get('/:id/feedbacks', userMiddleware.getUser, async (req, res) => {
+router.get('/:id/feedbacks', async (req, res) => {
   const id = req.params.id;
 
   try {
@@ -248,7 +248,7 @@ router.get('/:id/rate', async (req, res) => {
 /**
  * Get client data
  */
-router.get('/:id', userMiddleware.getUser, async (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = req.params.id;
 
   try {

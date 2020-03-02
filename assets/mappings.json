@@ -31,6 +31,10 @@
     "postedBy": {
       "type": "text"
     },
+    "postedById": {
+      "type": "integer",
+      "index": false
+    },
     "location": {
       "type": "text"
     },

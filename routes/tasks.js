@@ -29,7 +29,7 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
   }).optional();
 
   const schema = Joi.object().keys({
-    title: Joi.string().required(),
+    title: Joi.string().max(100).required(),
     description: Joi.string().required(),
     location: Joi.string().allow(null),
     type: Joi.string().allow(null),
@@ -273,7 +273,7 @@ router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
   const schema = Joi.object().keys({
     id: Joi.number().integer().optional(),
     postedBy: Joi.number().integer().optional(),
-    title: Joi.string().required(),
+    title: Joi.string().max(100).required(),
     description: Joi.string().required(),
     price: Joi.any().when('negotiablePrice', {
       is: true,

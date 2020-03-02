@@ -99,6 +99,7 @@ const reindexTasks = async () => {
         location: task.location,
         status: task.status,
         postedBy: task.owner.name,
+        postedById: task.owner.id,
         skills: task.skills ? task.skills.map(s => s.name) : [],
         categories: task.skills ? _.uniq(task.skills.map(s => s.category.name)) : [],
       },
