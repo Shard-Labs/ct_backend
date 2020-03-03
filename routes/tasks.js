@@ -66,6 +66,14 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     });
   }
 
+  //check if client has all required data set
+  if (!user.client.name) {
+    return res.status(400).json({
+      success: false,
+      message: 'No required client data set',
+    });
+  }
+
   let transaction;
 
   try {

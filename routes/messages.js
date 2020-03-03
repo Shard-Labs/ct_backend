@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const models = require('../models');
 const Op = models.Sequelize.Op;
+const constants = require('../lib/constants.js');
 
 /**
  * Get all message threads for current user
@@ -24,7 +25,10 @@ router.get('/threads', async (req, res) => {
 
   const data = await models.Application.findAll({
     where: {
-      [Op.or]: userConditions
+      [Op.or]: userConditions,
+      status: {
+        [Op.lte]: constants.applicationStatuses.ACCEPTED,
+      },
     },
     include: [
       {
