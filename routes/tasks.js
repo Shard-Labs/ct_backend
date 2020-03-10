@@ -46,7 +46,7 @@ router.post('/', jwt.checkToken, isClient, async (req, res) => {
     }),
     negotiableDuration: Joi.boolean().optional(),
     attachments: Joi.array().items(attachmentsSchema).optional().allow(null),
-    skills: Joi.array().items(skillsSchema).optional().allow(null),
+    skills: Joi.array().min(1).items(skillsSchema).required(),
     publicKey: Joi.any().optional().allow(null),
     sig: Joi.any().optional().allow(null),
     nonce: Joi.any().optional().allow(null),
@@ -297,7 +297,7 @@ router.put('/:taskId', jwt.checkToken, isClient, async (req, res) => {
     negotiableDuration: Joi.boolean().optional(),
     status: Joi.number().optional(),
     attachments: Joi.array().items(attachmentsSchema).optional(),
-    skills: Joi.array().items(skillsSchema).optional(),
+    skills: Joi.array().min(1).items(skillsSchema).required(),
     location: Joi.string().required(),
     type: Joi.string().required(),
   });
