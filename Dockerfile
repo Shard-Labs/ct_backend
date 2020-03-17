@@ -1,4 +1,3 @@
-FROM node:10
+FROM node:12
 COPY . .
-RUN npm install
-CMD 
+RUN yarn install

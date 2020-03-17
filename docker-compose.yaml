@@ -1,15 +1,5 @@
 version: "3.3"
 services:
-  server:
-    build: ./server
-    depends_on:
-      - mysql
-    env-file: .env
-    ports:
-      - 8000:8000
-    links:
-      - db
-    command: yarn start
   db:
     image: mysql:5.7
     ports:
@@ -23,6 +13,20 @@ services:
       MYSQL_PASSWORD: 'password'
       # Password for root access
       MYSQL_ROOT_PASSWORD: 'password'
+    networks: 
+      - backend 
+  server:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - 3000:3000
+    command: bash -c "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all && yarn start"
+    networks: 
+      - backend
+    restart: always
+networks: 
+  backend:
 
 
 
