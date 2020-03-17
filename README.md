@@ -47,7 +47,7 @@ Copy config/example.json to config/development.json and enter real data. When da
 
 On this branch, you have already development.json configured for running using docker-compose.
 
-Just type docker-compose up to bring up containers for database and backend. Everything is fully automated with default configs.
+Just type `docker-compose up` to bring up containers for database and backend. Everything is fully automated with default configs.
 Backend is exposed to port 3000 on host which is default port on which frontend connects.
 
 ## TODO

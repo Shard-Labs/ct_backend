@@ -21,7 +21,7 @@
     "defaultFrom": "test@test.com"
   },
   "db": {
-    "host": "ct_backend_db_1",
+    "host": "db",
     "database": "db",
     "username": "user",
     "password": "password"
