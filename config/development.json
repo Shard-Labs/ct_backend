@@ -4,7 +4,7 @@
     "clientKey": "XXX",
     "secretKey": "XXX",
     "region": "eu-central-1",
-    "esHost": "https://xxx"
+    "esHost": "http://elasticsearch:9200"
   },
   "jwt": {
     "secret": "xxx"
@@ -36,8 +36,8 @@
   },
   "bc": {
     "seed": "xxx",
-    "address": "xxx",
-    "url": "https://xxx"
+    "address": "http://elasticsearch:9200",
+    "url": "http://elasticsearch:9200"
   },
   "feedbackVisibleAfter": 3
 }
