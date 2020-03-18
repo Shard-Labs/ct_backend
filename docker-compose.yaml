@@ -37,6 +37,8 @@ services:
       - 9200:9200
       - 9300:9300
   server:
+    #Uncomment next line and comment line below that one if you want to change some config and use your image in compose
+    #build: .
     image: shardlabs/cryptotask:backend-latest
     container_name: server
     depends_on:
@@ -49,6 +51,8 @@ services:
       - backend
     restart: always
   frontend:
+    #Uncomment next line and comment line below that one if you want to change some config and use your image in compose.
+    #build: <pathToDockerFile>
     image: shardlabs/cryptotask:frontend-latest
     container_name: frontend
     ports: 
