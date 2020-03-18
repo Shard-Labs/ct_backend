@@ -49,7 +49,7 @@ Write your own development.json file as explained above.
 
 Just type `docker-compose up` to bring up containers for database, backend and frontend. Everything is fully automated with default configs.
 
-# Sign up
+# Sign up with dummy mail
 *  Go to localhost:8080 and navigate to *Sign Up*.
 *  Type some email address and password and confirm that by clicking *Sign Up for CryptoTask* button.
 *  You will get response that you have to confirm your email address. To do that manually follow steps below.
