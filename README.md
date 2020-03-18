@@ -47,11 +47,10 @@ Copy config/example.json to config/development.json and enter real data. When da
 
 Write your own development.json file as explained above.
 
-Just type `docker-compose up` to bring up containers for database and backend. Everything is fully automated with default configs.
-Backend is exposed to port 3000 on host which is default port on which frontend connects.
+Just type `docker-compose up` to bring up containers for database, backend and frontend. Everything is fully automated with default configs.
 
 # Sign up
-*  Run frontend separately and navigate to *Sign Up*.
+*  Go to localhost:8080 and navigate to *Sign Up*.
 *  Type some email address and password and confirm that by clicking *Sign Up for CryptoTask* button.
 *  You will get response that you have to confirm your email address. To do that manually follow steps below.
 *  In another terminal run `docker exec -it db mysql -u root -p` and type "12345678" when requested for password.
@@ -60,6 +59,3 @@ Backend is exposed to port 3000 on host which is default port on which frontend 
 *  To confirm email type `update users set emailConfirmed=1 where id=1;` where *id* corresponds to users id from table above.
 *  Check if it is all as wished `select * from users;`
 
-
-## TODO
-Add frontend to this docker-compose for easier running of whole project on any machine.

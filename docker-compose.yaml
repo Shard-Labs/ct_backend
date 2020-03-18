@@ -37,7 +37,7 @@ services:
       - 9200:9200
       - 9300:9300
   server:
-    build: .
+    image: shardlabs/cryptotask:backend-latest
     container_name: server
     depends_on:
       - db
@@ -48,6 +48,11 @@ services:
     networks: 
       - backend
     restart: always
+  frontend:
+    image: shardlabs/cryptotask:frontend-latest
+    container_name: frontend
+    ports: 
+      - 8080:8080
 networks: 
   backend:
 volumes:
